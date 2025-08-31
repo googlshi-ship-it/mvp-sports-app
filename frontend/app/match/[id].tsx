@@ -115,7 +115,7 @@ export default function MatchDetails() {
   };
 
   const scheduleVoteReminders = async () => { try { await apiPost(`/api/notifications/schedule_for_match`, { matchId: id }); setScheduled(true); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ?? 0); toast("Scheduled"); } catch (e) { console.warn(e); } };
-  const rescheduleReminders = async () => { try { await apiPost(`/api/notifications/reschedule_match`, { matchId: id }); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ?? 0); toast("Rescheduled"); } catch (e) { console.warn(e); } };
+  const rescheduleReminders = async () => { try { await apiPost(`/api/notifications/reschedule_match`, { matchId: id }); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ~~ 0); toast("Rescheduled"); } catch (e) { console.warn(e); } };
   const cancelReminders = async () => { try { await apiPost(`/api/notifications/cancel_match`, { matchId: id }); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ?? 0); toast("Canceled"); } catch (e) { console.warn(e); } };
   const simulateFinish = async () => { try { await apiPost(`/api/notifications/simulate_finish_now`, { matchId: id }); toast("Simulated finish; dispatch will send now"); } catch (e) { console.warn(e); } };
   const notifyTestAudience = async () => { try { const res = await apiPost(`/api/notifications/notify_test_audience`, { matchId: id }); toast(`Sent: ${res.sent}`); } catch (e) { console.warn(e); } };
@@ -130,12 +130,7 @@ export default function MatchDetails() {
   const cardProps: any = reduceEffects ? {} : { intensity: 30, tint: "dark" };
 
   if (loading) return (<View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}><ActivityIndicator color="#9b8cff" /></View>);
-  if (!match) return (
-    <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
-      <Text style={{ color: "#fff", marginBottom: 8 }}>Not found</Text>
-      <TouchableOpacity onPress={load} style={styles.retryBtn}><Text style={styles.smallBtnTxt}>Retry</Text></TouchableOpacity>
-    </View>
-  );
+  if (!match) return (<View style={styles.container}><Text style={{ color: "#fff", padding: 16 }}>Not found</Text></View>);
 
   const kickoff = match?.start_time_local ? new Date(match.start_time_local).toLocaleString() : (match?.startTime ? new Date(match.startTime).toLocaleString() : "—");
   const channels = (match?.channels?.[country] as string[] | undefined) || [];
@@ -194,13 +189,23 @@ export default function MatchDetails() {
     );
   };
 
+  const onShare = () => {
+    toast("Share coming soon");
+  };
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 260 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}>
         <View style={styles.header}>
           {sportIcon(match?.sport)}
           <Text style={styles.headerTxt}>{match?.tournament || "—"}</Text>
-          {queueCount !== null && <Text style={styles.queueChip}>Queue {queueCount}</Text>}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+            {queueCount !== null && <Text style={styles.queueChip}>Queue {queueCount}</Text>}
+            <TouchableOpacity onPress={onShare} style={[styles.smallBtn, { paddingVertical: 6, paddingHorizontal: 8 }]}>
+              <Ionicons name="share-outline" size={16} color="#fff" />
+              <Text style={styles.smallBtnTxt}>Share</Text>
+            </TouchableOpacity>
+          </View>
           {match?.subgroup ? <Text style={styles.subgroup}> · {match.subgroup}</Text> : null}
         </View>
 
@@ -460,5 +465,4 @@ const styles = StyleSheet.create({
   sectionTitle: { color: "#9aa3b2", fontWeight: "700" },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeTxt: { fontWeight: "800", fontSize: 12 },
-  retryBtn: { alignSelf: "center", marginTop: 8, backgroundColor: "#1f1b3a", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
 });
