@@ -148,6 +148,19 @@ Sport = Literal["football", "basketball", "ufc"]
 
 
 class Team(BaseModel):
+
+# Minimal dispatcher stubs to avoid startup errors if notifications section is trimmed
+async def _dispatch_now_internal():
+    return 0
+
+async def _dispatch_loop():
+    while True:
+        try:
+            await _dispatch_now_internal()
+        except Exception as e:
+            logger.warning(f"Dispatch loop error: {e}")
+        await asyncio.sleep(90)
+
     type: Literal["club", "national"]
     name: str
     countryCode: Optional[str] = None
