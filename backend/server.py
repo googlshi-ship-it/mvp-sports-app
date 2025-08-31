@@ -140,7 +140,7 @@ async def ensure_indexes():
     await db.votes.create_index("matchId")
     await db.users.create_index("email", unique=True)
     await db.competitions.create_index([("type", 1), ("country", 1), ("season", 1)])
-    await db.competitions.create_index("slug", unique=True)
+    await db.competitions.create_index("slug", unique=True, partialFilterExpression={"slug": {"$exists": True}})
 
 
 async def backfill_voting_windows():
