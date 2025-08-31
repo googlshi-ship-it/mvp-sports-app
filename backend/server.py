@@ -768,7 +768,7 @@ async def submit_player_rating(match_id: str, body: Dict, current=Depends(get_us
         acc["passing"] += r.get("passing", 0)
         acc["dribbling"] += r.get("dribbling", 0)
         acc["count"] += 1
-    if acc["count"] &gt; 0:
+    if acc["count"] > 0:
         av = {k: (acc[k] / acc["count"]) for k in ["attack", "defense", "passing", "dribbling"]}
         delta = 0
         for k in ["attack", "defense", "passing", "dribbling"]:
