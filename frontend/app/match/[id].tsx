@@ -1,13 +1,14 @@
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ToastAndroid, Alert, RefreshControl, Modal } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ToastAndroid, Alert, RefreshControl, Modal, Share } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { apiGet, apiPost, apiPostAdmin } from "../../src/api/client";
+import { apiGet, apiPost, apiPostAdmin, RIVALRY_UI } from "../../src/api/client";
 import { getRegisteredPushToken } from "../../src/notifications";
 import { useUIStore } from "../../src/store/ui";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../src/store/auth";
+import * as Clipboard from "expo-clipboard";
 
 function sportIcon(sport?: string) {
   if (sport === "football") return <Ionicons name="football-outline" size={18} color="#8a7cff" />;
