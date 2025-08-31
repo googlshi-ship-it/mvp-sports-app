@@ -596,6 +596,7 @@ async def matches_grouped(country: Optional[str] = None, tz: Optional[str] = Non
         st = m["startTime"]
         if isinstance(st, str):
             st = datetime.fromisoformat(st)
+        st = to_utc(st)  # Ensure UTC for comparison
         if st <= today_end:
             bucket = "today"
         elif st <= tomorrow_end:
