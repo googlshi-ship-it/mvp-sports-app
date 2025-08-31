@@ -69,7 +69,7 @@ class MatchBase(BaseModel):
 
 
 class MatchDB(MatchBase):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: str = Field(alias="_id")
 
     class Config:
         populate_by_name = True
