@@ -67,6 +67,9 @@ export default function MatchesScreen() {
         }}
       >
         <GlassCard fixedHeight={172}>
+          {RIVALRY_UI && (item as any)?.rivalry?.enabled ? (
+            <View pointerEvents="none" style={styles.topGlow} />
+          ) : null}
           <View style={styles.rowBetween}>
             <Text style={styles.time}>{time}</Text>
             <View style={styles.tournamentRow}>
