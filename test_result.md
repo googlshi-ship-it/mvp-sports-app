@@ -256,6 +256,132 @@ backend:
     status_history:
       - working: false
         agent: "testing"
+  - agent: "testing"
+    message: "✅ Backend testing completed for Competitions + Lineups/Injuries. All new endpoints working. Seeding created 2 competitions and 3 matches. Admin overrides validated with X-Admin-Token. Fixed ObjectId serialization in grouped endpoint."
+
+# New backend tasks tracked by main agent
+backend:
+  - task: "Competitions list: GET /api/competitions"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Returns seeded competitions (La Liga 2025, UEFA Champions League 2025)."
+  - task: "Competition detail: GET /api/competitions/{id}"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Returns name, country, season, type."
+  - task: "Competition matches with TZ: GET /api/competitions/{id}/matches?tz=..."
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Matches include startTime (UTC) and start_time_local (tz). competition_id serialized."
+  - task: "Matches grouped with TZ: GET /api/matches/grouped?tz=..."
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "Initial 500 due to ObjectId serialization."
+      - working: true
+        agent: "testing"
+        comment: "✅ Fixed by serializing competition_id and ensuring datetime ISO; now returns buckets with start_time_local."
+  - task: "Lineups read: GET /api/matches/{id}/lineups"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Returns formations, starters/bench, unavailable, status and updated timestamps."
+  - task: "Lineups embed: GET /api/matches/{id}?include=lineups"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Embedded lineups payload matches standalone endpoint."
+  - task: "Admin override lineups: POST /api/matches/{id}/lineups"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Requires X-Admin-Token. Updates formation_home and lineups_status; lineups_updated_at refreshed."
+  - task: "Admin override injuries: POST /api/matches/{id}/injuries"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Requires X-Admin-Token. Updates unavailable_home/away; injuries_updated_at refreshed."
+  - task: "Seeding competitions + matches + demo lineups/injuries"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ On startup, seeds La Liga 2025 and UCL 2025 with 3 upcoming matches and demo lineups/unavailables."
+
+# Update metadata and plan
+metadata:
+  created_by: "main_agent"
+  version: "1.1"
+  test_sequence: 2
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Backend: Competitions endpoints"
+    - "Backend: Lineups/Injuries endpoints"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Added Competitions + Lineups/Injuries backend with tz handling and admin overrides; seeded demo data. Testing agent validated all new endpoints; one grouped tz issue fixed. User prefers manual frontend testing; we will proceed to implement frontend next upon confirmation."
         comment: "❌ Minor issue: GET /api/matches/grouped?tz=Europe/Madrid returns 500 error due to ObjectId serialization in datetime comparison. Core functionality works but timezone parameter causes issues. Needs ObjectId/datetime serialization fix."
 frontend:
   - task: "Expo Router tabs + navigation"
