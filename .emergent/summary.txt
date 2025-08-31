@@ -1,0 +1,57 @@
+<analysis>
+The trajectory outlines the development of an MVP sports mobile application, starting from core features and iteratively building complexity. Initially, the AI engineer established a FastAPI backend with MongoDB and an Expo frontend, implementing match listings, details, basic ratings, and settings. Key early additions included a comprehensive fan voting UI for different sports, push notification reminders (final whistle and an opt-in 12-hour reminder), and a multi-country channel selector. A significant portion of the conversation focused on developing an extensive Admin Debug panel for managing and monitoring push notifications, featuring queue visibility, device diagnostics, and scheduling tools. The development path saw an abrupt shift after a SOMETHING_WENT_WRONG error, pivoting to a full user authentication and rating system, including JWT-based login/registration, user scoring based on vote alignment, and a leaderboard. The most recent task involves enforcing a strict 24-hour voting window, which has been partially implemented on the backend, with the frontend UI remaining.
+</analysis>
+
+<product_requirements>
+The MVP mobile app combines sports schedules, TV channels, and fan ratings, featuring a modern iOS-inspired glassmorphism design with light/dark themes. Core screens include:
+1.  **Match List (Home)**: Matches grouped by date, showing time, teams (flags/colors for national), tournament (sport icon), subgroup, and TV channels for the user's default country (CH - Switzerland by default).
+2.  **Match Details**: Displays tournament/subgroup, teams, match time/status, a Channels block (default country first, dropdown for CH, DE, AT, FR, IT, GB, US, GE, ES, GR, showing TBD if unmapped). Post-match, users can Like/Dislike the match, submit votes for MVP, best scorer, assist, defender (and goalkeeper for Football, specific categories for UFC). Voting results are shown as percentages and totals. Reminders toggles (7d/1d/1h) are planned.
+3.  **My Teams**: Lists favorite teams/national teams and their next upcoming match.
+4.  **Settings**: Configures default country, theme (Auto/Light/Dark), 7d/1d/1h reminders, and an option to Display clubs like national teams. A Reduce effects toggle and 12h vote reminder toggle (default OFF) were added. An Admin Debug section (dev-only or feature-flagged) provides extensive controls for notifications and device diagnostics.
+**Notifications**: Push notifications are sent at final whistle (Vote for MVP now!) and an optional 12h reminder (if not voted, opt-in via Settings).
+**User System**: Implemented with email/password registration/login, JWT authentication, and a user rating system. User scores increase/decrease based on vote alignment with community averages. A leaderboard displays top 20 users by score. All voting/rating endpoints require authentication.
+**Voting Window**: A strict 24-hour voting window is enforced, starting at match final time. Voting is blocked outside this window.
+</product_requirements>
+
+<key_technical_concepts>
+- Expo (React Native for mobile development)
+- FastAPI (Python backend)
+- MongoDB (Database)
+- Expo Router (File-based routing)
+- Zustand (Frontend state management)
+- TheSportsDB (External API for sports data)
+- Expo Push Notifications (Push notification service)
+- JWT (JSON Web Tokens for authentication)
+- bcrypt (Password hashing)
+- Glassmorphism (UI design paradigm)
+</key_technical_concepts>
+
+<code_architecture>
+The project is structured with a  Expo app and a  FastAPI application.
+
+
+
+-   : This is the core FastAPI backend file. It contains all API endpoints, MongoDB model definitions, business logic for data import (TheSportsDB), match handling, ratings, fan voting, push notification scheduling/dispatching, user authentication (registration, login, current user, leaderboard), and the new strict voting window logic. It's frequently modified as features are added.
+-   : This file likely serves as the main Matches List screen, displaying matches grouped by date with interactive cards. It handles data fetching, display, and navigation to match details.
+-    and : These files define the navigation structure using Expo Router.  might define the root layout, while  specifically sets up the tab-based navigation (Matches, My Teams, Settings, Profile, Leaderboard).
+-   : This is the Match Details screen, a dynamic route displaying specific match information, channels, voting UI (like/dislike, player voting, star ratings), and notification scheduling controls. It's a critical interactive screen.
+-   : The Settings screen. It hosts general app settings (country, theme, reminders) and the comprehensive Admin Debug panel for notification management and device diagnostics.
+-    and : These screens handle user authentication. They capture user input for email and password, interact with backend auth endpoints, and manage JWT token storage.
+-    and : The Profile screen displays user-specific information (email, score, logout), while the Leaderboard screen shows top users by score.
+-   : Centralized API client for interacting with the backend. It ensures consistent URL prefixing and token attachment.
+-   : Defines the UI theme, including colors, typography, and potentially glassmorphism-related styles for light/dark modes.
+-   : A Zustand store for managing authentication state (e.g., JWT token, user info, login/logout actions).
+-    and : These likely manage notification-related state and utility functions, such as requesting permissions, registering tokens, and interacting with notification scheduling endpoints.
+</code_architecture>
+
+<pending_tasks>
+-   **Frontend implementation for strict 24h voting cutoff**: The UI needs to show a countdown, disable voting controls, display Voting closed badges, and gracefully handle 403 errors when voting is not open or closed.
+</pending_tasks>
+
+<current_work>
+The application currently features a robust backend (FastAPI, MongoDB) and a feature-rich Expo frontend. Users can register and log in, with JWTs securing interactions. A user rating system is integrated, where scores adjust based on voting alignment with community averages, displayed on a leaderboard. The app provides detailed match information, including fan voting options for various sports (MVP, scorer, defender, etc., plus specific categories like Goalkeeper for Football), and a multi-country channel selector. A comprehensive push notification system is in place, scheduling reminders for match events and post-match voting, with a background dispatcher and admin controls for monitoring and triggering. Safeguards like skipping 12h reminders if a user has already voted are implemented. The most recent task was to enforce a strict 24-hour voting window for matches. The backend has been updated to calculate  and  for each match, block unauthorized voting attempts outside this window, and include this timing information in match data. However, the frontend UI components to visualize this countdown, disable interactive elements when voting is closed, and display appropriate error messages are yet to be implemented.
+</current_work>
+
+<optional_next_step>
+Implement the frontend UI for the strict 24h voting cutoff, showing countdowns and disabling controls.
+</optional_next_step>
