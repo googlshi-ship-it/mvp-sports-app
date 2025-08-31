@@ -132,27 +132,27 @@ export default function MatchDetails() {
   if (loading) return (<View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}><ActivityIndicator color="#9b8cff" /></View>);
   if (!match) return (<View style={styles.container}><Text style={{ color: "#fff", padding: 16 }}>Not found</Text></View>);
 
-  const kickoff = new Date(match.startTime).toLocaleString();
-  const channels = (match.channels?.[country] as string[] | undefined) || [];
+  const kickoff = match?.start_time_local ? new Date(match.start_time_local).toLocaleString() : (match?.startTime ? new Date(match.startTime).toLocaleString() : "—");
+  const channels = (match?.channels?.[country] as string[] | undefined) || [];
 
-  const lineups = match.lineups;
+  const lineups = match?.lineups;
   const updatedLineups = lineups?.lineups_updated_at ? new Date(lineups.lineups_updated_at) : null;
   const updatedInjuries = lineups?.injuries_updated_at ? new Date(lineups.injuries_updated_at) : null;
 
   const openAdmin = (kind: "lineups" | "injuries") => {
     const current = kind === "lineups"
       ? {
-          formation_home: match.formation_home || "",
-          formation_away: match.formation_away || "",
-          lineup_home: match.lineup_home || [],
-          lineup_away: match.lineup_away || [],
-          bench_home: match.bench_home || [],
-          bench_away: match.bench_away || [],
-          lineups_status: match.lineups_status || "none",
+          formation_home: match?.formation_home || "",
+          formation_away: match?.formation_away || "",
+          lineup_home: match?.lineup_home || [],
+          lineup_away: match?.lineup_away || [],
+          bench_home: match?.bench_home || [],
+          bench_away: match?.bench_away || [],
+          lineups_status: match?.lineups_status || "none",
         }
       : {
-          unavailable_home: match.unavailable_home || [],
-          unavailable_away: match.unavailable_away || [],
+          unavailable_home: match?.unavailable_home || [],
+          unavailable_away: match?.unavailable_away || [],
         };
     setAdminModal({ open: true, kind, json: JSON.stringify(current, null, 2), token: "CHANGEME" });
   };
@@ -173,9 +173,9 @@ export default function MatchDetails() {
     }
   };
 
-  const renderPerson = (p: any) => (
-    <Text style={styles.person} key={(p.playerId || p.name) + Math.random()}>
-      {p.number ? `${p.number} · ` : ""}{p.name}{p.pos ? ` · ${p.pos}` : ""}
+  const renderPerson = (p: any, idx: number) => (
+    <Text style={styles.person} key={p?.playerId || `${p?.number}-${p?.name}-${p?.pos}-${idx}`}>
+      {p?.number ? `${p.number} · ` : ""}{p?.name || "—"}{p?.pos ? ` · ${p.pos}` : ""}
     </Text>
   );
 
@@ -193,20 +193,20 @@ export default function MatchDetails() {
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 260 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}>
         <View style={styles.header}>
-          {sportIcon(match.sport)}
-          <Text style={styles.headerTxt}>{match.tournament}</Text>
+          {sportIcon(match?.sport)}
+          <Text style={styles.headerTxt}>{match?.tournament || "—"}</Text>
           {queueCount !== null && <Text style={styles.queueChip}>Queue {queueCount}</Text>}
-          {match.subgroup ? <Text style={styles.subgroup}> · {match.subgroup}</Text> : null}
+          {match?.subgroup ? <Text style={styles.subgroup}> · {match.subgroup}</Text> : null}
         </View>
 
         <Card {...cardProps} style={styles.card}>
           <Text style={styles.time}>{kickoff}</Text>
           <View style={styles.teamsRow}>
-            <Text style={styles.team}>{match.homeTeam?.name}</Text>
+            <Text style={styles.team}>{match?.homeTeam?.name || "—"}</Text>
             <Text style={styles.vs}> — </Text>
-            <Text style={styles.team}>{match.awayTeam?.name}</Text>
+            <Text style={styles.team}>{match?.awayTeam?.name || "—"}</Text>
           </View>
-          {(match.stadium || match.venue) ? <Text style={styles.channels}>{match.stadium || match.venue}</Text> : null}
+          {(match?.stadium || match?.venue) ? <Text style={styles.channels}>{match.stadium || match.venue}</Text> : null}
         </Card>
 
         {/* Lineups card */}
@@ -257,19 +257,19 @@ export default function MatchDetails() {
             <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.sectionTitle}>Home</Text>
-                {(lineups.home?.unavailable || []).map((p: any) => (
-                  <View key={(p.playerId || p.name) + Math.random()} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <StatusChip status={p.status} />
-                    <Text style={styles.person}>{p.name}{p.reason ? ` — ${p.reason}` : ""}</Text>
+                {(lineups.home?.unavailable || []).map((p: any, idx: number) => (
+                  <View key={p?.playerId || `${p?.name}-home-${idx}`} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <StatusChip status={p?.status} />
+                    <Text style={styles.person}>{p?.name || "—"}{p?.reason ? ` — ${p.reason}` : ""}</Text>
                   </View>
                 ))}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.sectionTitle}>Away</Text>
-                {(lineups.away?.unavailable || []).map((p: any) => (
-                  <View key={(p.playerId || p.name) + Math.random()} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <StatusChip status={p.status} />
-                    <Text style={styles.person}>{p.name}{p.reason ? ` — ${p.reason}` : ""}</Text>
+                {(lineups.away?.unavailable || []).map((p: any, idx: number) => (
+                  <View key={p?.playerId || `${p?.name}-away-${idx}`} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <StatusChip status={p?.status} />
+                    <Text style={styles.person}>{p?.name || "—"}{p?.reason ? ` — ${p.reason}` : ""}</Text>
                   </View>
                 ))}
               </View>
@@ -332,7 +332,7 @@ export default function MatchDetails() {
           <TouchableOpacity disabled={submitting || !name.trim()} onPress={submitVote} style={[styles.submit, (!name.trim() || submitting) && { opacity: 0.6 }]}><Ionicons name="send-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>{submitting ? "Submitting..." : "Submit Vote"}</Text></TouchableOpacity>
         </Card>
 
-        {match.sport === "football" && (
+        {match?.sport === "football" && (
           <Card {...cardProps} style={styles.card}>
             <Text style={styles.blockTitle}>Player star ratings (10⭐ each)</Text>
             <Text style={styles.voteLine}>Rate: {name || "(enter player name above)"}</Text>

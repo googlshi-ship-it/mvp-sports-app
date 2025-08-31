@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, FlatList, Image, TouchableOpacity, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, FlatList, Image, TouchableOpacity, RefreshControl, Platform, ToastAndroid, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiGet } from "../../src/api/client";
 
@@ -21,7 +21,10 @@ function groupByDate(matches: any[]): { title: string; data: any[] }[] {
   const todayEnd = new Date(start.getTime() + 24*3600*1000);
   const tomorrowEnd = new Date(start.getTime() + 48*3600*1000);
   matches.forEach((m) => {
-    const st = new Date(m.startTime);
+    const raw = m?.startTime;
+    if (!raw) { out[2].data.push(m); return; }
+    const st = new Date(raw);
+    if (isNaN(st.getTime())) { out[2].data.push(m); return; }
     if (st <= todayEnd) out[0].data.push(m);
     else if (st <= tomorrowEnd) out[1].data.push(m);
     else out[2].data.push(m);
@@ -35,16 +38,19 @@ export default function CompetitionDetail() {
   const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const toast = (m: string) => { if (Platform.OS === "android") ToastAndroid.show(m, ToastAndroid.SHORT); else Alert.alert(m); };
 
   const load = async () => {
     try {
+      setError(null);
       const c = await apiGet(`/api/competitions/${id}`);
       const ms = await apiGet(`/api/competitions/${id}/matches?tz=${encodeURIComponent(tz)}`);
-      setComp(c); setMatches(ms || []);
-    } catch (e) { console.warn(e); } finally { setLoading(false); setRefreshing(false); }
+      setComp(c); setMatches(Array.isArray(ms) ? ms : []);
+    } catch (e: any) { console.warn(e); setError("Failed to load competition"); toast("Failed to load competition"); } finally { setLoading(false); setRefreshing(false); }
   };
 
   useEffect(() => { load(); }, [id]);
@@ -59,13 +65,15 @@ export default function CompetitionDetail() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        {comp.logoUrl ? <Image source={{ uri: comp.logoUrl }} style={styles.logo} /> : <View style={[styles.logo, { backgroundColor: "#101526" }]} />}
+        {comp?.logoUrl ? <Image source={{ uri: comp.logoUrl }} style={styles.logo} /> : <View style={[styles.logo, { backgroundColor: "#101526" }]} />}
         <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{comp.name}</Text>
-          <Text style={styles.meta}>Season {comp.season} • {comp.countryCode || comp.country}</Text>
+          <Text style={styles.name}>{comp?.name || "—"}</Text>
+          <Text style={styles.meta}>Season {comp?.season || "—"} • {comp?.countryCode || comp?.country || "—"}</Text>
         </View>
-        <TypeBadge type={comp.type} />
+        <TypeBadge type={comp?.type} />
       </View>
+
+      {error ? <Text style={[styles.meta, { textAlign: "center", paddingBottom: 8 }]}>{error}</Text> : null}
 
       <FlatList
         data={sections}
@@ -75,11 +83,11 @@ export default function CompetitionDetail() {
           <View style={{ marginBottom: 18 }}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
             {section.data.map((m) => (
-              <TouchableOpacity key={m._id} style={styles.row} onPress={() => router.push(`/match/${m._id}`)}>
+              <TouchableOpacity key={m?._id || `${m?.homeTeam?.name}-${m?.awayTeam?.name}-${m?.startTime}`} style={styles.row} onPress={() => router.push(`/match/${m._id}`)}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.time}>{m.start_time_local ? new Date(m.start_time_local).toLocaleTimeString() : new Date(m.startTime).toLocaleTimeString()}</Text>
-                  <Text style={styles.matchLine}>{m.homeTeam?.name} — {m.awayTeam?.name}</Text>
-                  {(m.stadium || m.venue) ? <Text style={styles.meta}>{m.stadium || m.venue}</Text> : null}
+                  <Text style={styles.time}>{m?.start_time_local ? new Date(m.start_time_local).toLocaleTimeString() : (m?.startTime ? new Date(m.startTime).toLocaleTimeString() : "—")}</Text>
+                  <Text style={styles.matchLine}>{m?.homeTeam?.name || "—"} — {m?.awayTeam?.name || "—"}</Text>
+                  {(m?.stadium || m?.venue) ? <Text style={styles.meta}>{m.stadium || m.venue}</Text> : null}
                 </View>
               </TouchableOpacity>
             ))}

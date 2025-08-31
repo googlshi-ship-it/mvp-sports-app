@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, FlatList, TouchableOpacity, RefreshControl, Image } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, FlatList, TouchableOpacity, RefreshControl, Image, Platform, ToastAndroid, Alert } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { apiGet } from "../../src/api/client";
 
@@ -14,14 +14,20 @@ export default function Competitions() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const toast = (m: string) => { if (Platform.OS === "android") ToastAndroid.show(m, ToastAndroid.SHORT); else Alert.alert(m); };
 
   const load = async () => {
     try {
+      setError(null);
       const res = await apiGet(`/api/competitions`);
-      setItems(res || []);
-    } catch (e) {
+      setItems(Array.isArray(res) ? res : []);
+    } catch (e: any) {
       console.warn(e);
+      setError("Failed to load competitions");
+      toast("Failed to load competitions");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -41,7 +47,7 @@ export default function Competitions() {
 
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.row} onPress={() => router.push(`/competition/${item._id}`)}>
-      {item.logoUrl ? (
+      {item?.logoUrl ? (
         <Image source={{ uri: item.logoUrl }} style={styles.logo} resizeMode="contain" />
       ) : (
         <View style={[styles.logo, { backgroundColor: "#101526", alignItems: "center", justifyContent: "center" }]}>
@@ -49,18 +55,19 @@ export default function Competitions() {
         </View>
       )}
       <View style={{ flex: 1 }}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.meta}>Season {item.season} • {item.countryCode || item.country}</Text>
+        <Text style={styles.name}>{item?.name || "—"}</Text>
+        <Text style={styles.meta}>Season {item?.season || "—"} • {item?.countryCode || item?.country || "—"}</Text>
       </View>
-      <TypeBadge type={item.type} />
+      <TypeBadge type={item?.type} />
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
+      {error ? <Text style={[styles.meta, { textAlign: "center", padding: 8 }]}>{error}</Text> : null}
       <FlatList
         data={items}
-        keyExtractor={(it) => it._id}
+        keyExtractor={(it) => it?._id || `${it?.name}-${it?.season}`}
         renderItem={renderItem}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
