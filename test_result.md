@@ -106,81 +106,102 @@ user_problem_statement: "Build MVP sports app with schedules + TV channels + fan
 backend:
   - task: "Root health: GET /api/"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Added root endpoint to confirm backend is up."
+      - working: true
+        agent: "testing"
+        comment: "✅ Root endpoint working correctly. Returns {message: 'MVP backend running'} with 200 status."
   - task: "Status checks CRUD"
     implemented: true
-    working: false
+    working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "low"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Added POST/GET /api/status for basic DB write/read."
+      - working: "NA"
+        agent: "testing"
+        comment: "Not tested as per test plan focus. Endpoints exist but not in current testing scope."
   - task: "Import TheSportsDB events"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Added POST /api/import/thesportsdb with days param and CH channel mapping."
+      - working: true
+        agent: "testing"
+        comment: "✅ Import working correctly. Successfully imports events from TheSportsDB API with proper created/updated counts."
   - task: "Matches list/grouped/detail"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "GET /api/matches, /api/matches/grouped, /api/matches/{id}."
+      - working: true
+        agent: "testing"
+        comment: "✅ All match endpoints working. Fixed Pydantic v2 ObjectId compatibility issue. GET /api/matches/grouped returns proper structure with today/tomorrow/week arrays. Match creation and retrieval working correctly."
   - task: "Ratings like/dislike"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "POST /api/matches/{id}/rate increments likes/dislikes."
+      - working: true
+        agent: "testing"
+        comment: "✅ Rating system working correctly. Successfully increments likes/dislikes and returns proper percentages."
   - task: "Fan voting endpoints"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "POST /api/matches/{id}/vote and GET /api/matches/{id}/votes return percentages."
+      - working: true
+        agent: "testing"
+        comment: "✅ Voting system working correctly. POST vote increments player votes and returns percentages. GET votes retrieves all voting data with proper percentage calculations."
   - task: "Push register"
     implemented: true
-    working: false
+    working: "NA"
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "low"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "POST /api/push/register stores Expo push tokens."
+      - working: "NA"
+        agent: "testing"
+        comment: "Not tested as per test plan focus. Endpoint exists but not in current testing scope."
 frontend:
   - task: "Expo Router tabs + navigation"
     implemented: true
