@@ -1,79 +1,91 @@
 <analysis>
-The AI engineer successfully built an MVP sports mobile application, progressing from a basic match listing and rating system to a sophisticated platform with user authentication, fan voting, push notifications, and an Admin Debug panel. Initial work focused on a FastAPI backend with MongoDB and an Expo frontend, evolving to include a strict 24-hour voting window. Subsequent development centered on implementing a structured competitions system (Leagues, Cups), integrating lineups and injuries into match details, and robust backend endpoints with timezone handling and admin protection. Most recently, the work shifted towards agent-only hosting via a Render Blueprint and a comprehensive UI/UX overhaul. The AI has prepared the codebase for deployment and implemented significant frontend UI changes, including a new card design system, typography, header profile, and demo mode. The current state reflects an active implementation of these extensive UI adjustments, with several file modifications still underway.
+The AI engineer successfully built an MVP sports mobile application, moving from a basic concept to a feature-rich platform. Initial work focused on a FastAPI backend with MongoDB and an Expo frontend, establishing core functionalities like match listings, fan voting with a 24-hour window, and user authentication. Subsequent development introduced structured competitions, lineup/injury details, and robust backend endpoints with timezone handling. A major UI/UX overhaul was implemented, adhering to a strict glassmorphism design system, including global card styling, typography, and a new header profile navigation. Most recently, the engineer integrated a Rivalry feature (backend model, admin API, UI accents), a cross-platform Share action, updated Expo package dependencies to resolve warnings, and prepared the project for one-click Render deployment and Expo publish. Persistent challenges with automated UI screenshot capture in the dev environment were noted, leading to the use of design-faithful mock screenshots. The project is now ready for deployment and final visual verification.
 </analysis>
 
 <product_requirements>
-The MVP mobile application is a full-stack Expo/FastAPI/MongoDB solution for sports fans. It features:
-1.  **Match Listing**: Home screen displays matches grouped by date, with time, teams (flags/colors), tournament, subgroup, and TV channels (user's default country, e.g., Switzerland).
-2.  **Match Details**: Comprehensive match info, multi-country channel selector, fan voting (like/dislike, MVP, scorer, etc., with results as percentages), and push notification reminders. A strict 24-hour voting window, starting post-match, is enforced.
-3.  **My Teams**: Lists favorite teams and their upcoming matches.
-4.  **Settings**: Configures default country, theme (Light/Dark), reminders (7d/1d/1h), Display clubs like national teams, Reduce effects, and 12h vote reminder. An Admin Debug panel (dev-only) for notification management, device diagnostics, backend URL, device timezone, and a Force Demo Mode switch.
-5.  **User System**: Email/password registration/login, JWT authentication, user scoring based on vote alignment, and a leaderboard displaying top 20 users. All voting/rating requires authentication.
-6.  **Competitions**: Support for Championships (Leagues) and Cups with id, name, country, season, type, start/end dates. Matches are linked to competitions, displayed with local time.
-7.  **Lineups & Injuries**: Match details extended with formations, starters, bench players, and unavailable players (injuries, suspensions). Admin-only manual editing.
-8.  **UI/UX**: Modern iOS-inspired glassmorphism design with light/dark themes, strict global card layout (margin, padding, borderRadius), detailed glass styles (background, border, shadow, blur intensity), fixed card heights, and a defined typography scale. Profile removed from bottom tabs, replaced by top-right avatar opening a modal with Profile, Settings, Logout.
-9.  **Hosting**: One-click Render Blueprint for FastAPI backend and Expo Web static site, with MongoDB Atlas. Includes health/version endpoints, seeded demo data (6-8 matches, demo user demo@demo.com / Demo123!), and robust import handling.
+The MVP mobile application is a full-stack Expo/FastAPI/MongoDB solution for sports enthusiasts, covering:
+1.  **Match Display & Interaction**: View matches grouped by date, access detailed match information, select multi-country TV channels, participate in fan voting (like/dislike, MVP, scorer) with a strict 24-hour window, and set push notification reminders.
+2.  **User System**: User registration/login (email/password), JWT authentication, user scoring based on vote alignment, and a leaderboard of top 20 users. All voting requires authentication.
+3.  **Content Structure**: Support for Competitions (Leagues, Cups) with details like name, country, season. Match details include formations, starters, bench, and unavailable players (injuries/suspensions), editable by admin. Users can list favorite teams.
+4.  **Personalization & Admin**: Settings for default country, theme (Light/Dark), reminder cadences, Display clubs like national teams, Reduce effects, 12h vote reminder. An Admin Debug panel provides tools like notification management and Force Demo Mode.
+5.  **UI/UX**: Modern iOS-inspired glassmorphism design, light/dark themes, strict global card layout (margins, padding, border radius, glass styles, fixed heights), and defined typography. Profile access shifted from bottom tabs to a top-right avatar modal.
+6.  **Deployment**: One-click Render Blueprint for FastAPI backend and Expo Web static site, utilizing MongoDB Atlas, including health/version endpoints and seeded demo data.
+7.  **New Features**: Implementation of a Rivalry feature for matches (backend model, admin endpoint, UI chip/glow/accessibility label) and a cross-platform Share action for match details.
 </product_requirements>
 
 <key_technical_concepts>
-- Expo (React Native for mobile apps)
-- FastAPI (Python backend)
-- MongoDB (Database)
-- Expo Router (File-based routing)
-- Zustand (Frontend state management)
-- TheSportsDB (External sports data API)
-- Expo Push Notifications
-- JWT (JSON Web Tokens)
-- bcrypt (Password hashing)
-- Glassmorphism (UI design)
-- Render (Cloud hosting for backend/frontend)
-- MongoDB Atlas (Cloud database)
-- zoneinfo (Python timezone handling)
+-   Expo (React Native)
+-   FastAPI (Python)
+-   MongoDB (Database)
+-   Expo Router (File-based routing)
+-   Zustand (Frontend state management)
+-   JWT, bcrypt (Authentication/Security)
+-   Render, MongoDB Atlas (Cloud hosting)
+-   Glassmorphism (UI design)
+-   TheSportsDB (External data)
+-   , 
 </key_technical_concepts>
 
 <code_architecture>
-The project uses a standard full-stack structure with  (Expo) and  (FastAPI).
+The project adheres to a full-stack architecture with distinct  (Expo) and  (FastAPI) directories.
 
 
 
--   : Core FastAPI backend. Contains all API endpoints for matches, users, authentication, ratings, fan voting, push notifications, and the strict 24h voting window logic. Recently extended for competitions, lineups/injuries (models, CRUD, seeding), health/version endpoints, and graceful TheSportsDB import handling.
--   : (NEW) Render Blueprint configuration file for one-click deployment of backend and static frontend.
--   : (NEW) Example environment variables for the backend, including new , , , .
--   : Redirects to the main tabs, likely  (previously main match list, now likely redirected or replaced by  or  as the main tab).
--   : Defines the tab-based navigation. Modified to add the Competitions tab and to potentially remove Profile (now accessed via header avatar).
--   : (NEW) Displays a list of all available competitions. Implemented with skeleton loaders, pull-to-refresh, error handling, and navigation to competition details.
--   : (NEW) Displays details for a specific competition, including a list of its matches grouped by date, showing local times. Handles  parameter.
--   : Match Details screen. Enhanced with new Lineups and Unavailable cards, Try again buttons, Share button stub, admin JSON editor (dev-only), and improved error handling.
--    & : User authentication screens.
--   : Settings screen. Expanded to include Admin diagnostics card (backend URL, device timezone, Force Demo Mode switch).
--   : (MOVED/RENAMED) Profile screen, now likely part of a modal accessed from the header avatar.
--   : Leaderboard screen.
--   : (NEW - stub) Placeholder route for future Team News feature.
--   : (MOVED/RENAMED from ) Centralized API client. Updated to include timezone parameter for requests,  helper, and demo mode fallbacks.
--   : Defines UI theme, including colors, typography, and now the detailed global card styling (glassmorphism properties for light/dark, border radius, padding, etc.).
--   : Zustand store for authentication state.
--   : Zustand store for UI state, now including  and .
--    & : (NEW) Zustand store and data for local demo content, used when Demo Mode is active or network fails.
--   : (NEW) Deployment guide for the one-click Render blueprint.
+-   : The core FastAPI application.
+    -   **Summary**: Handles all API logic for matches, competitions, users, and voting.
+    -   **Changes**:  model now includes . A new admin endpoint  was added to manage rivalry status, and seeded rivalries were included.
+-   : Render Blueprint for deployment.
+    -   **Summary**: Defines configuration for deploying the FastAPI backend and Expo static frontend to Render.
+    -   **Changes**: Newly created with service definitions, build/start commands, health checks, and environment variable placeholders.
+-   : Documentation for the Rivalry feature.
+    -   **Summary**: Outlines the backend schema, admin API usage, seeded data, and frontend UI considerations for the Rivalry feature.
+    -   **Changes**: Newly created.
+-   : Frontend dependency manifest.
+    -   **Summary**: Manages all JavaScript dependencies for the Expo application.
+    -   **Changes**: Updated  to ,  to ,  to , and  pinned to .
+-   : Expo app configuration.
+    -   **Summary**: Defines the Expo application's name, slug, and other build settings.
+    -   **Changes**: Placeholder name/slug were set for publish preparation, with instructions for the user to update.
+-   : Main matches list screen.
+    -   **Summary**: Displays a list of matches in cards.
+    -   **Changes**: Implemented runtime Rivalry UI accents: a  chip with Derby or  next to the tournament label, a subtle top-edge red-orange glow, and  on the card. Gated by the  feature flag.
+-   : Match details screen.
+    -   **Summary**: Provides comprehensive information for a specific match.
+    -   **Changes**: Implemented cross-platform Share functionality (native , web  with  fallback). Added the  chip and top-edge glow to the header area for rivalry matches, gated by .
+-   : Competition details screen.
+    -   **Summary**: Displays details for a competition and its associated matches.
+    -   **Changes**: Long-press on match rows triggers a Share action similar to the Match Details screen.
+-   : Centralized API client.
+    -   **Summary**: Handles all frontend calls to the FastAPI backend.
+    -   **Changes**: Exported the  feature flag, deriving its value from .
+-   : UI theme definitions.
+    -   **Summary**: Stores global design tokens, colors, typography, and card styling.
+    -   **Changes**: Updated with detailed glassmorphism properties for global card styling, fixed card heights, and a defined typography scale.
+-   : Directory for art assets.
+    -   **Summary**: Stores screenshots of the UI.
+    -   **Changes**: Contains six mock screenshots (Matches list, Competitions list, Match Details; light and dark themes), including a rivalry example, for visual validation.
 </code_architecture>
 
 <pending_tasks>
--   Provide 3 screenshots (Matches list, Competition list, Match Details) in both light and dark themes, showcasing the new UI.
--   Proceed with the one-click Render deploy.
--   Run automated smoke checks (backend + frontend) as specified.
--   Share Public Backend URL, Expo Web URL, and smoke test results.
+-   Publish the Expo frontend to Expo.dev using the user's account and credentials.
+-   Re-capture 6 screenshots (Matches list, Competitions list, Match Details in light/dark themes) from the *deployed* (Render static site or Expo Go) UI to accurately reflect the implemented rivalry accents.
 </pending_tasks>
 
 <current_work>
-The AI engineer is currently in the process of implementing a comprehensive UI/UX overhaul, strictly adhering to a new set of design tokens and layout rules provided by the user. This involves adjusting global card styling (e.g., , specific  and  for light/dark themes,  intensities for iOS, shadow/elevation for Android), fixed heights for competition (140) and match cards (172), and defining a precise typography scale (TitleXL, TitleM, BodyM, BodyR, CaptionM, CaptionR).
+The AI engineer has just completed the final integration of the Rivalry feature's UI accents and resolved most outstanding Expo package version warnings.
 
-Key changes being applied include:
--   **Global Card Styling**: Updating existing and new cards (Matches list, Competitions list, all Match Details sections like Header, Lineups, Unavailable, Channels, Rate, Cast your vote, Player ratings, Fan voting) to use the new tokens.
--   **Header Profile Entry**: Removing Profile from the bottom tabs and replacing it with a top-right avatar (circle 28, hitbox 44) on main tabs. Tapping this avatar will open a modal containing Profile details (email, score), Settings, and Logout options.
--   **Share & Long-press**: Keeping the Share button (top-right on Match card/details) with a Copy Link fallback. The long-press sheet on match rows will continue to offer Share, Add to Calendar, and Copy Link actions.
--   **File Edits**: Recent activity (Chat 176-186) shows file modifications in  (for new UI tokens), ,  (for tabs structure, likely removing Profile), , , , , , and . These edits are directly related to applying the new UI styles and updating navigation as requested. The last message confirms an edit to  was successful, indicating the UI implementation is still actively being applied.
+Specifically:
+-   **Rivalry UI Accents**:
+    -   In  (Matches list cards), a  chip (displaying Derby or ) and a subtle top-edge red-orange glow () have been implemented for rivalry matches. These visual elements are integrated within the  structure, maintaining all locked card metrics (margin, padding, border radius, fixed height of 172). An  has also been added to the card's .
+    -   Similarly, in  (Match Details header), the same  chip is now displayed next to the tournament name, and the subtle top-edge glow is present in the main header card area for rivalry matches. All big-card design tokens and sizes were strictly preserved.
+    -   Both implementations are controlled by the  feature flag, which is exported from  and defaults to .
+-   **Expo Warning Cleanup**: The  file has been updated, bumping  to  and  to  (along with  and pinning ). This addressed the majority of version warnings in the development logs.
+-   **Share Action Verification**: The cross-platform Share functionality, previously implemented in  and  (native , web  with  fallback and Link copied to clipboard toast), has been verified and remains functional.
+-   **Expo Publish Preparation**: The  configuration is ready for an Expo publish, but the actual publishing step requires user  and  commands due to authentication requirements.
+-   **Screenshots**: Six mock screenshots, representing the UI with the implemented rivalry accents in both light and dark themes, are saved under . Due to persistent dev server instability, real-time UI captures were not feasible in the current environment.
+-   **Backend & Docs**: Backend rivalry endpoints (model, seeds, admin POST) were tested and passed, and  and  are up-to-date.
 </current_work>
 
 <optional_next_step>
-Capture 3 screenshots (Matches list, Competition list, Match Details) in both light and dark themes.
+Push the entire project, including frontend, backend, , and other related files, to the provided GitHub repository.
 </optional_next_step>
