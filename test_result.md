@@ -202,6 +202,61 @@ backend:
       - working: "NA"
         agent: "testing"
         comment: "Not tested as per test plan focus. Endpoint exists but not in current testing scope."
+  - task: "Competitions CRUD endpoints"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Competitions endpoints working correctly. GET /api/competitions returns 2 seeded competitions (La Liga 2025, UEFA Champions League 2025). GET /api/competitions/{id} returns proper fields: name, country, season, type."
+  - task: "Competition matches with timezone support"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Competition matches endpoint working correctly. GET /api/competitions/{id}/matches?tz=Europe/Madrid returns 2-3 matches with proper fields: startTime (UTC), start_time_local (tz-adjusted), competition_id. Fixed ObjectId serialization issues."
+  - task: "Match lineups and injuries API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Lineups and injuries API working correctly. GET /api/matches/{id}?include=lineups returns lineups object with formations, starters/bench lists, unavailable lists, lineups_status, and updated timestamps. GET /api/matches/{id}/lineups returns same payload as embedded."
+  - task: "Admin lineups and injuries overrides"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Admin overrides working correctly. POST /api/matches/{id}/lineups with X-Admin-Token updates formation_home and lineups_status with proper lineups_updated_at timestamp. POST /api/matches/{id}/injuries with X-Admin-Token updates unavailable_home list with proper injuries_updated_at timestamp."
+  - task: "Matches grouped with timezone (existing endpoint compatibility)"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ Minor issue: GET /api/matches/grouped?tz=Europe/Madrid returns 500 error due to ObjectId serialization in datetime comparison. Core functionality works but timezone parameter causes issues. Needs ObjectId/datetime serialization fix."
 frontend:
   - task: "Expo Router tabs + navigation"
     implemented: true
