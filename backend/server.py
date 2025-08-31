@@ -788,7 +788,7 @@ async def submit_player_rating(match_id: str, body: Dict, current=Depends(get_us
 # ---------------------------
 # Lineups & Injuries API
 # ---------------------------
-async def _get_lineups_payload(m: Dict) -&gt; Dict:
+async def _get_lineups_payload(m: Dict) -> Dict:
     return {
         "lineups_status": m.get("lineups_status", "none"),
         "formation_home": m.get("formation_home"),
