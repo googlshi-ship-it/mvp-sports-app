@@ -899,4 +899,8 @@ def main():
         return 1
 
 if __name__ == "__main__":
-    sys.exit(main())
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "rivalry":
+        sys.exit(rivalry_smoke_tests())
+    else:
+        sys.exit(main())
