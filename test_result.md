@@ -378,6 +378,17 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ All 7 backend smoke tests passed: GET /api/ (200 with message), GET /api/version (200 with version/gitSha), GET /api/competitions (200 with 2 competitions), GET /api/competitions/{id} (200 with name/country/season/type), GET /api/competitions/{id}/matches?tz=Europe/Zurich (200 with proper fields), GET /api/matches (200 with isVotingOpen/start_time_local), GET /api/matches/grouped?country=CH (200 with today/tomorrow/week arrays). Backend fully operational."
+  - task: "Rivalry admin endpoint: POST /api/matches/{id}/rivalry"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ Rivalry admin endpoint working correctly. Successfully tested complete flow: (1) GET /api/ returns 200 with message, (2) GET /api/version returns 200 with version/gitSha fields, (3) GET /api/matches returns 200 with rivalry objects, (4) Found Barcelona vs Real Madrid rivalry match, (5) POST /api/matches/{id}/rivalry with X-Admin-Token: CHANGEME and body {enabled: true, intensity: 2, tag: 'Test Derby'} returns 200 with updated rivalry, (6) GET /api/matches/{id} confirms rivalry update persisted, (7) GET /api/matches/grouped?country=CH returns 200. All 7 smoke tests passed including new rivalry admin functionality."
 
 # Update metadata and plan
 metadata:
