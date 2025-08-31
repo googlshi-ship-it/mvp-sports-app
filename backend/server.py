@@ -12,7 +12,6 @@ from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 import requests
 
-
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -75,7 +74,9 @@ class MatchBase(BaseModel):
     startTime: datetime
     status: Literal["scheduled", "live", "finished"] = "scheduled"
     score: Optional[Score] = None
-    channels: Dict[str, List[str]] = Field(default_factory=dict)  # countryCode -&gt; channel names
+    channels: Dict[str, List[str]] = Field(default_factory=dict)  # countryCode -> channel names
+    source: Optional[str] = None
+    sourceId: Optional[str] = None
 
 
 class MatchDB(MatchBase):
@@ -112,9 +113,9 @@ class StatusCheckCreate(BaseModel):
 THESPORTSDB_KEY = os.environ.get("THESPORTSDB_KEY", "3")
 
 SPORT_MAP = {
-    "football": "soccer",
-    "basketball": "basketball",
-    "ufc": "fighting",
+    "football": "Soccer",
+    "basketball": "Basketball",
+    "ufc": "Fighting",
 }
 
 # Manual CH channel mapping by sport (simple MVP)
@@ -126,6 +127,7 @@ CHANNELS_CH = {
 
 async def ensure_indexes():
     await db.matches.create_index("startTime")
+    await db.matches.create_index("sourceId", unique=True)
     await db.ratings.create_index("matchId")
     await db.votes.create_index("matchId")
     await db.push_tokens.create_index("token", unique=True)
@@ -137,6 +139,7 @@ async def on_startup():
         await ensure_indexes()
     except Exception as e:
         logger.warning(f"Index ensure failed: {e}")
+
 
 # ---------------------------
 # Routes
@@ -175,7 +178,6 @@ async def list_matches(country: Optional[str] = None, sport: Optional[Sport] = N
         q["sport"] = sport
     if status:
         q["status"] = status
-    # Country is used client-side to pick channels; we still return all matches
     items = await db.matches.find(q).sort("startTime", 1).to_list(1000)
     return [MatchDB(**m) for m in items]
 
@@ -296,6 +298,80 @@ async def register_push(body: PushRegister):
         upsert=True,
     )
     return {"ok": True}
+
+
+# ----------- Import from TheSportsDB -----------
+class ImportRequest(BaseModel):
+    days: int = 2  # today + N-1 days
+
+
+def _parse_ts(d: Dict) -> Optional[datetime]:
+    ts = d.get("strTimestamp") or None
+    if ts:
+        try:
+            # TheSportsDB strTimestamp is UTC like '2025-07-01 19:45:00'
+            return datetime.strptime(ts, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        except Exception:
+            pass
+    # Fallback
+    date_s = d.get("dateEvent")
+    time_s = (d.get("strTime") or "00:00:00").strip()
+    if date_s:
+        try:
+            return datetime.strptime(f"{date_s} {time_s}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        except Exception:
+            try:
+                return datetime.strptime(date_s, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            except Exception:
+                return None
+    return None
+
+
+@api_router.post("/import/thesportsdb")
+async def import_thesportsdb(body: ImportRequest):
+    created = 0
+    updated = 0
+    today = datetime.now(timezone.utc).date()
+    for offset in range(body.days):
+        d = today + timedelta(days=offset)
+        d_str = d.isoformat()
+        for sport_key, s_value in SPORT_MAP.items():
+            url = f"https://www.thesportsdb.com/api/v1/json/{THESPORTSDB_KEY}/eventsday.php?d={d_str}&s={s_value}"
+            try:
+                r = requests.get(url, timeout=15)
+                data = r.json()
+            except Exception as e:
+                logger.warning(f"Fetch failed {url}: {e}")
+                continue
+            events = data.get("events") or []
+            for ev in events:
+                ext_id = ev.get("idEvent")
+                if not ext_id:
+                    continue
+                st = _parse_ts(ev)
+                if not st:
+                    continue
+                doc = {
+                    "sport": sport_key,
+                    "tournament": ev.get("strLeague") or (ev.get("strEvent") or ""),
+                    "subgroup": ev.get("strSeason"),
+                    "homeTeam": {"type": "club", "name": ev.get("strHomeTeam") or "TBD"},
+                    "awayTeam": {"type": "club", "name": ev.get("strAwayTeam") or "TBD"},
+                    "startTime": st,
+                    "status": "scheduled",
+                    "channels": {"CH": CHANNELS_CH.get(sport_key, [])},
+                    "source": "thesportsdb",
+                    "sourceId": ext_id,
+                }
+                # Upsert by sourceId
+                existing = await db.matches.find_one({"sourceId": ext_id})
+                if existing:
+                    await db.matches.update_one({"_id": existing["_id"]}, {"$set": doc})
+                    updated += 1
+                else:
+                    await db.matches.insert_one(doc)
+                    created += 1
+    return {"created": created, "updated": updated}
 
 
 # Include the router in the main app
