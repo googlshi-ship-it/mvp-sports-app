@@ -621,6 +621,8 @@ async def get_match(match_id: str, include: Optional[str] = None, tz: Optional[s
     if not m:
         raise HTTPException(status_code=404, detail="Match not found")
     m["_id"] = str(m["_id"])  # type: ignore
+    if "competition_id" in m and m["competition_id"]:
+        m["competition_id"] = str(m["competition_id"])  # type: ignore
     extra = with_voting_status(m)
     st = m.get("startTime")
     if isinstance(st, str):
