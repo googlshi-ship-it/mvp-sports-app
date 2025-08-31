@@ -518,6 +518,165 @@ def test_admin_injuries_override(match_id):
         print(f"   ❌ Error: {e}")
         return False
 
+# ===== NEW RIVALRY ADMIN ENDPOINT TESTS =====
+
+def test_version_endpoint():
+    """Test GET /api/version - expect 200 with version and gitSha fields"""
+    print("\n🔍 Testing GET /api/version")
+    try:
+        response = requests.get(f"{BASE_URL}/version")
+        print(f"   Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print(f"   Response: {data}")
+            
+            required_fields = ["version", "gitSha"]
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if not missing_fields:
+                print(f"   ✅ Version endpoint working - Version: {data['version']}, GitSha: {data['gitSha']}")
+                return True
+            else:
+                print(f"   ❌ Missing required fields: {missing_fields}")
+                return False
+        else:
+            print(f"   ❌ Expected 200, got {response.status_code}")
+            print(f"   Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return False
+
+def find_rivalry_match():
+    """Find a seeded rivalry match (Barcelona vs Real Madrid or Celtics vs Lakers)"""
+    print("\n🔍 Finding rivalry match from seeded data")
+    try:
+        response = requests.get(f"{BASE_URL}/matches")
+        print(f"   Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            matches = response.json()
+            print(f"   Found {len(matches)} total matches")
+            
+            # Look for rivalry matches
+            rivalry_matches = []
+            for match in matches:
+                rivalry = match.get("rivalry", {})
+                if rivalry.get("enabled", False):
+                    home_team = match.get("homeTeam", {}).get("name", "")
+                    away_team = match.get("awayTeam", {}).get("name", "")
+                    rivalry_matches.append({
+                        "id": match.get("_id") or match.get("id"),
+                        "home": home_team,
+                        "away": away_team,
+                        "rivalry": rivalry
+                    })
+            
+            print(f"   Found {len(rivalry_matches)} rivalry matches:")
+            for rm in rivalry_matches:
+                print(f"     - {rm['home']} vs {rm['away']} (intensity: {rm['rivalry'].get('intensity', 0)})")
+            
+            # Look for specific rivalry matches
+            target_rivalries = [
+                ("Barcelona", "Real Madrid"),
+                ("Real Madrid", "Barcelona"),
+                ("Boston Celtics", "Los Angeles Lakers"),
+                ("Los Angeles Lakers", "Boston Celtics")
+            ]
+            
+            for rm in rivalry_matches:
+                for home_target, away_target in target_rivalries:
+                    if rm['home'] == home_target and rm['away'] == away_target:
+                        print(f"   ✅ Found target rivalry: {rm['home']} vs {rm['away']}")
+                        return rm['id'], rm
+            
+            # If no specific target found, return first rivalry match
+            if rivalry_matches:
+                rm = rivalry_matches[0]
+                print(f"   ✅ Using first rivalry match: {rm['home']} vs {rm['away']}")
+                return rm['id'], rm
+            else:
+                print(f"   ❌ No rivalry matches found")
+                return None, None
+        else:
+            print(f"   ❌ Expected 200, got {response.status_code}")
+            return None, None
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return None, None
+
+def test_rivalry_admin_endpoint(match_id):
+    """Test POST /api/matches/{id}/rivalry with admin token"""
+    print(f"\n🔍 Testing POST /api/matches/{match_id}/rivalry (Admin Rivalry Update)")
+    try:
+        headers = {"X-Admin-Token": ADMIN_TOKEN}
+        payload = {
+            "enabled": True,
+            "intensity": 2,
+            "tag": "Test Derby"
+        }
+        
+        response = requests.post(f"{BASE_URL}/matches/{match_id}/rivalry", json=payload, headers=headers)
+        print(f"   Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Check if rivalry was updated
+            rivalry = data.get("rivalry", {})
+            
+            if (rivalry.get("enabled") == True and 
+                rivalry.get("intensity") == 2 and 
+                rivalry.get("tag") == "Test Derby"):
+                print(f"   ✅ Rivalry admin endpoint successful")
+                print(f"   Rivalry: enabled={rivalry['enabled']}, intensity={rivalry['intensity']}, tag='{rivalry['tag']}'")
+                return True
+            else:
+                print(f"   ❌ Rivalry not updated correctly")
+                print(f"   Expected: enabled=True, intensity=2, tag='Test Derby'")
+                print(f"   Got: enabled={rivalry.get('enabled')}, intensity={rivalry.get('intensity')}, tag='{rivalry.get('tag')}'")
+                return False
+        else:
+            print(f"   ❌ Expected 200, got {response.status_code}")
+            print(f"   Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return False
+
+def verify_rivalry_update(match_id):
+    """Test GET /api/matches/{id} to confirm rivalry is updated"""
+    print(f"\n🔍 Testing GET /api/matches/{match_id} (Verify Rivalry Update)")
+    try:
+        response = requests.get(f"{BASE_URL}/matches/{match_id}")
+        print(f"   Status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Check if rivalry was persisted
+            rivalry = data.get("rivalry", {})
+            
+            if (rivalry.get("enabled") == True and 
+                rivalry.get("intensity") == 2 and 
+                rivalry.get("tag") == "Test Derby"):
+                print(f"   ✅ Rivalry update verified")
+                print(f"   Rivalry: enabled={rivalry['enabled']}, intensity={rivalry['intensity']}, tag='{rivalry['tag']}'")
+                return True
+            else:
+                print(f"   ❌ Rivalry update not persisted")
+                print(f"   Expected: enabled=True, intensity=2, tag='Test Derby'")
+                print(f"   Got: enabled={rivalry.get('enabled')}, intensity={rivalry.get('intensity')}, tag='{rivalry.get('tag')}'")
+                return False
+        else:
+            print(f"   ❌ Expected 200, got {response.status_code}")
+            print(f"   Response: {response.text}")
+            return False
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return False
+
 def test_matches_grouped_with_timezone():
     """Test GET /api/matches/grouped?tz=Europe/Madrid - ensure existing endpoint still works"""
     print("\n🔍 Testing GET /api/matches/grouped?tz=Europe/Madrid (Existing endpoint)")
