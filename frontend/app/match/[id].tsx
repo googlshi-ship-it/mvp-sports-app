@@ -228,7 +228,10 @@ export default function MatchDetails() {
             <Text style={[styles.subtle, { marginTop: 4 }]}>{lineups?.formation_home || "—"} vs {lineups?.formation_away || "—"}</Text>
           ) : null}
           {!lineups || (!lineups.home?.starters?.length && !lineups.away?.starters?.length && !lineups.home?.bench?.length && !lineups.away?.bench?.length) ? (
-            <Text style={styles.voteLine}>No lineups yet</Text>
+            <View>
+              <Text style={styles.voteLine}>No lineups yet</Text>
+              <TouchableOpacity onPress={load} style={[styles.smallBtn, { marginTop: 8, alignSelf: "flex-start" }]}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Try again</Text></TouchableOpacity>
+            </View>
           ) : (
             <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
               <View style={{ flex: 1 }}>
@@ -257,7 +260,10 @@ export default function MatchDetails() {
             </View>
           </View>
           {!lineups || ((!lineups.home?.unavailable || lineups.home.unavailable.length === 0) && (!lineups.away?.unavailable || lineups.away.unavailable.length === 0)) ? (
-            <Text style={styles.voteLine}>No injuries/suspensions reported</Text>
+            <View>
+              <Text style={styles.voteLine}>No injuries/suspensions reported</Text>
+              <TouchableOpacity onPress={load} style={[styles.smallBtn, { marginTop: 8, alignSelf: "flex-start" }]}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Try again</Text></TouchableOpacity>
+            </View>
           ) : (
             <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
               <View style={{ flex: 1 }}>

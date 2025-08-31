@@ -24,6 +24,10 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+# App meta
+APP_VERSION = os.environ.get("APP_VERSION", "1.0.0")
+GIT_SHA = os.environ.get("GIT_SHA", "dev")
+
 # JWT
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret")
 JWT_ALGO = "HS256"
@@ -138,7 +142,7 @@ async def ensure_indexes():
     await db.ratings.create_index("matchId")
     await db.votes.create_index("matchId")
     await db.users.create_index("email", unique=True)
-    await db.competitions.create_index([("type", 1), ("country", 1), ("season", 1)])
+    await db.competitions.create_index([("type", 1), ("country", 1), ("name", 1)])
     await db.competitions.create_index("slug", unique=True, partialFilterExpression={"slug": {"$exists": True}})
 
 
@@ -149,89 +153,155 @@ async def backfill_voting_windows():
         await db.matches.update_one({"_id": m["_id"]}, {"$set": comp})
 
 
+async def seed_demo_user():
+    try:
+        email = "demo@demo.com"
+        existing = await db.users.find_one({"email": email})
+        if not existing:
+            hashed = bcrypt.hash("Demo123!")
+            await db.users.insert_one({"email": email, "password": hashed, "score": 0, "createdAt": datetime.utcnow()})
+    except Exception as e:
+        logger.warning(f"Seed demo user failed: {e}")
+
+
 async def seed_competitions_and_matches():
     cnt = await db.competitions.count_documents({})
-    if cnt > 0:
-        return
-    # Seed competitions
-    la_liga = {
-        "name": "La Liga",
-        "country": "Spain",
-        "countryCode": "ES",
-        "season": "2025",
-        "type": "league",
-        "start_date": datetime(2025, 8, 15, tzinfo=timezone.utc),
-        "end_date": datetime(2026, 5, 31, tzinfo=timezone.utc),
-        "slug": "la-liga-2025",
-    }
-    ucl = {
-        "name": "UEFA Champions League",
-        "country": "Europe",
-        "countryCode": "EU",
-        "season": "2025",
-        "type": "cup",
-        "start_date": datetime(2025, 6, 1, tzinfo=timezone.utc),
-        "end_date": datetime(2026, 5, 31, tzinfo=timezone.utc),
-        "slug": "uefa-champions-league-2025",
-    }
-    res1 = await db.competitions.insert_one(la_liga)
-    res2 = await db.competitions.insert_one(ucl)
-
-    now = datetime.now(timezone.utc)
-    def mk_match(hours_from_now: int, comp_id):
-        return {
-            "sport": "football",
-            "tournament": "La Liga" if comp_id == res1.inserted_id else "UEFA Champions League",
-            "subgroup": "Matchday",
-            "homeTeam": {"type": "club", "name": "Team A", "countryCode": "ES"},
-            "awayTeam": {"type": "club", "name": "Team B", "countryCode": "ES"},
-            "startTime": now + timedelta(hours=hours_from_now),
-            "status": "scheduled",
-            "score": None,
-            "channels": {"CH": ["blue Sport"], "ES": ["Movistar"]},
-            "source": "seed",
-            "sourceId": f"seed_{uuid.uuid4()}",
-            "competition_id": comp_id,
-            "stadium": "Demo Stadium",
-            "venue": "Madrid",
-            # lineups/injuries demo
-            "formation_home": "4-3-3",
-            "formation_away": "4-2-3-1",
-            "lineup_home": [
-                {"number": "1", "name": "GK Home", "pos": "GK", "role": "starter", "playerId": "home_gk", "nationalityCode": "ES"},
-                {"number": "9", "name": "CF Home", "pos": "FW", "role": "starter", "playerId": "home_cf", "nationalityCode": "ES"},
-            ],
-            "lineup_away": [
-                {"number": "1", "name": "GK Away", "pos": "GK", "role": "starter", "playerId": "away_gk", "nationalityCode": "ES"},
-                {"number": "10", "name": "CF Away", "pos": "FW", "role": "starter", "playerId": "away_cf", "nationalityCode": "ES"},
-            ],
-            "bench_home": [
-                {"number": "12", "name": "Sub H1", "pos": "MF", "role": "sub", "nationalityCode": "ES"}
-            ],
-            "bench_away": [
-                {"number": "12", "name": "Sub A1", "pos": "MF", "role": "sub", "nationalityCode": "ES"}
-            ],
-            "unavailable_home": [
-                {"name": "Injured H1", "reason": "Hamstring", "type": "injury", "status": "out", "nationalityCode": "ES"},
-                {"name": "Doubt H2", "reason": "Knock", "type": "injury", "status": "doubtful", "nationalityCode": "ES"},
-            ],
-            "unavailable_away": [
-                {"name": "Susp A1", "reason": "Red card", "type": "suspension", "status": "out", "nationalityCode": "ES"}
-            ],
-            "lineups_status": "probable",
-            "lineups_updated_at": datetime.now(timezone.utc),
-            "injuries_updated_at": datetime.now(timezone.utc),
+    if cnt == 0:
+        # Seed competitions
+        la_liga = {
+            "name": "La Liga",
+            "country": "Spain",
+            "countryCode": "ES",
+            "season": "2025",
+            "type": "league",
+            "start_date": datetime(2025, 8, 15, tzinfo=timezone.utc),
+            "end_date": datetime(2026, 5, 31, tzinfo=timezone.utc),
+            "slug": "la-liga-2025",
         }
+        ucl = {
+            "name": "UEFA Champions League",
+            "country": "Europe",
+            "countryCode": "EU",
+            "season": "2025",
+            "type": "cup",
+            "start_date": datetime(2025, 6, 1, tzinfo=timezone.utc),
+            "end_date": datetime(2026, 5, 31, tzinfo=timezone.utc),
+            "slug": "uefa-champions-league-2025",
+        }
+        res1 = await db.competitions.insert_one(la_liga)
+        res2 = await db.competitions.insert_one(ucl)
 
-    matches = [
-        mk_match(6, res1.inserted_id),
-        mk_match(24, res1.inserted_id),
-        mk_match(36, res2.inserted_id),
-    ]
-    for m in matches:
-        comp = compute_final_and_window(m)
-        m.update(comp)
-    await db.matches.insert_many(matches)
+        now = datetime.now(timezone.utc)
+        def mk_football(hours_from_now: int, comp_id):
+            return {
+                "sport": "football",
+                "tournament": "La Liga" if comp_id == res1.inserted_id else "UEFA Champions League",
+                "subgroup": "Matchday",
+                "homeTeam": {"type": "club", "name": "Team A", "countryCode": "ES"},
+                "awayTeam": {"type": "club", "name": "Team B", "countryCode": "ES"},
+                "startTime": now + timedelta(hours=hours_from_now),
+                "status": "scheduled",
+                "channels": {"CH": ["blue Sport"], "ES": ["Movistar"]},
+                "source": "seed",
+                "sourceId": f"seed_{uuid.uuid4()}",
+                "competition_id": comp_id,
+                "stadium": "Demo Stadium",
+                "venue": "Madrid",
+                "formation_home": "4-3-3",
+                "formation_away": "4-2-3-1",
+                "lineup_home": [
+                    {"number": "1", "name": "GK Home", "pos": "GK", "role": "starter", "playerId": "home_gk", "nationalityCode": "ES"},
+                    {"number": "9", "name": "CF Home", "pos": "FW", "role": "starter", "playerId": "home_cf", "nationalityCode": "ES"},
+                ],
+                "lineup_away": [
+                    {"number": "1", "name": "GK Away", "pos": "GK", "role": "starter", "playerId": "away_gk", "nationalityCode": "ES"},
+                    {"number": "10", "name": "CF Away", "pos": "FW", "role": "starter", "playerId": "away_cf", "nationalityCode": "ES"},
+                ],
+                "bench_home": [
+                    {"number": "12", "name": "Sub H1", "pos": "MF", "role": "sub", "nationalityCode": "ES"}
+                ],
+                "bench_away": [
+                    {"number": "12", "name": "Sub A1", "pos": "MF", "role": "sub", "nationalityCode": "ES"}
+                ],
+                "unavailable_home": [
+                    {"name": "Injured H1", "reason": "Hamstring", "type": "injury", "status": "out", "nationalityCode": "ES"},
+                    {"name": "Doubt H2", "reason": "Knock", "type": "injury", "status": "doubtful", "nationalityCode": "ES"},
+                ],
+                "unavailable_away": [
+                    {"name": "Susp A1", "reason": "Red card", "type": "suspension", "status": "out", "nationalityCode": "ES"}
+                ],
+                "lineups_status": "probable",
+                "lineups_updated_at": datetime.now(timezone.utc),
+                "injuries_updated_at": datetime.now(timezone.utc),
+            }
+        def mk_basketball(hours_from_now: int):
+            return {
+                "sport": "basketball",
+                "tournament": "EuroLeague",
+                "subgroup": "Round",
+                "homeTeam": {"type": "club", "name": "Madrid Hoops", "countryCode": "ES"},
+                "awayTeam": {"type": "club", "name": "Barcelona Dunks", "countryCode": "ES"},
+                "startTime": now + timedelta(hours=hours_from_now),
+                "status": "scheduled",
+                "channels": {"ES": ["DAZN"]},
+                "source": "seed",
+                "sourceId": f"seed_{uuid.uuid4()}",
+                "stadium": "WiZink Center",
+                "venue": "Madrid",
+                "lineup_home": [
+                    {"number": "7", "name": "PG Home", "pos": "PG", "role": "starter"},
+                    {"number": "23", "name": "SF Home", "pos": "SF", "role": "starter"},
+                ],
+                "lineup_away": [
+                    {"number": "3", "name": "PG Away", "pos": "PG", "role": "starter"},
+                    {"number": "33", "name": "SF Away", "pos": "SF", "role": "starter"},
+                ],
+                "bench_home": [{"number": "12", "name": "G Bench", "pos": "G", "role": "sub"}],
+                "bench_away": [{"number": "15", "name": "F Bench", "pos": "F", "role": "sub"}],
+                "unavailable_home": [{"name": "Home G Injury", "reason": "Ankle", "type": "injury", "status": "out"}],
+                "unavailable_away": [],
+                "lineups_status": "probable",
+                "lineups_updated_at": datetime.now(timezone.utc),
+                "injuries_updated_at": datetime.now(timezone.utc),
+            }
+        def mk_ufc(hours_from_now: int):
+            return {
+                "sport": "ufc",
+                "tournament": "UFC Fight Night",
+                "subgroup": "Main Card",
+                "homeTeam": {"type": "club", "name": "Fighter A", "countryCode": "US"},
+                "awayTeam": {"type": "club", "name": "Fighter B", "countryCode": "BR"},
+                "startTime": now + timedelta(hours=hours_from_now),
+                "status": "scheduled",
+                "channels": {"US": ["ESPN+"]},
+                "source": "seed",
+                "sourceId": f"seed_{uuid.uuid4()}",
+                "stadium": "T-Mobile Arena",
+                "venue": "Las Vegas",
+                "lineup_home": [{"number": "—", "name": "Fighter A", "pos": "", "role": "starter"}],
+                "lineup_away": [{"number": "—", "name": "Fighter B", "pos": "", "role": "starter"}],
+                "bench_home": [],
+                "bench_away": [],
+                "unavailable_home": [],
+                "unavailable_away": [],
+                "lineups_status": "confirmed",
+                "lineups_updated_at": datetime.now(timezone.utc),
+                "injuries_updated_at": datetime.now(timezone.utc),
+            }
+
+        matches = [
+            mk_football(6, res1.inserted_id),
+            mk_football(24, res1.inserted_id),
+            mk_football(36, res2.inserted_id),
+            mk_basketball(12),
+            mk_basketball(30),
+            mk_ufc(20),
+            mk_ufc(44),
+        ]
+        for m in matches:
+            comp = compute_final_and_window(m)
+            m.update(comp)
+        await db.matches.insert_many(matches)
 
 
 @app.on_event("startup")
@@ -240,6 +310,7 @@ async def on_startup():
         await ensure_indexes()
         await backfill_voting_windows()
         await seed_competitions_and_matches()
+        await seed_demo_user()
     except Exception as e:
         logger.warning(f"Startup setup failed: {e}")
     # Minimal background loop placeholder
@@ -448,8 +519,18 @@ def assert_voting_open_or_raise(match_doc: Dict):
 # Health & Auth
 # ---------------------------
 @api_router.get("/")
-async def health():
+async def health_root():
     return {"message": "MVP backend running"}
+
+
+@api_router.get("/health")
+async def health():
+    return {"ok": True}
+
+
+@api_router.get("/version")
+async def version():
+    return {"version": APP_VERSION, "gitSha": GIT_SHA}
 
 
 @api_router.post("/auth/register")
