@@ -35,12 +35,16 @@ class PyObjectId(ObjectId):
         yield cls.validate
 
     @classmethod
-    def validate(cls, v, validation_info=None):
-        if isinstance(v, ObjectId):
-            return v
-        if not ObjectId.is_valid(v):
-            raise ValueError('Invalid objectid')
-        return ObjectId(v)
+    def validate(cls, value):
+        if isinstance(value, ObjectId):
+            return value
+        if not ObjectId.is_valid(value):
+            raise ValueError('Invalid ObjectId')
+        return ObjectId(value)
+
+    @classmethod
+    def __modify_schema__(cls, field_schema):
+        field_schema.update(type='string')
 
 
 def start_of_day(dt: datetime) -> datetime:
