@@ -169,6 +169,9 @@ async def list_matches(country: Optional[str] = None, sport: Optional[Sport] = N
     if status:
         q["status"] = status
     items = await db.matches.find(q).sort("startTime", 1).to_list(1000)
+    # Convert ObjectId to string for each item
+    for item in items:
+        item["_id"] = str(item["_id"])
     return [MatchDB(**m) for m in items]
 
 
