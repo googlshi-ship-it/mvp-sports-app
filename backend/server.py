@@ -157,6 +157,7 @@ async def create_match(match: MatchCreate):
     doc = match.dict()
     res = await db.matches.insert_one(doc)
     created = await db.matches.find_one({"_id": res.inserted_id})
+    created["_id"] = str(created["_id"])  # Convert ObjectId to string
     return MatchDB(**created)
 
 
