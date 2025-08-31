@@ -775,7 +775,7 @@ async def submit_player_rating(match_id: str, body: Dict, current=Depends(get_us
             diff = abs(doc[k] - av[k])
             if diff <= 2:
                 delta += 1
-            elif diff &gt; 3:
+            elif diff > 3:
                 delta -= 1
         if delta != 0:
             await update_user_score(current["_id"], delta)
