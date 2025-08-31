@@ -353,7 +353,7 @@ class UserOut(BaseModel):
     score: int
 
 
-def create_token(user_id: str, email: str) -&gt; str:
+def create_token(user_id: str, email: str) -> str:
     payload = {"sub": user_id, "email": email, "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRE_HOURS)}
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
 
