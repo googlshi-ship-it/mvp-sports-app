@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, Switch } from "react-native";
+import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert } from "react-native";
 import { useState } from "react";
+import { registerForPushNotificationsAsync } from "../../src/notifications";
 
 export default function SettingsScreen() {
   const [r7, setR7] = useState(true);
@@ -7,15 +8,39 @@ export default function SettingsScreen() {
   const [r1h, setR1h] = useState(true);
   const [clubLikeNational, setClubLikeNational] = useState(false);
 
+  const [pushToken, setPushToken] = useState<string | null>(null);
+  const [remind12h, setRemind12h] = useState(false); // default OFF per spec
+
+  const enablePush = async () => {
+    try {
+      const token = await registerForPushNotificationsAsync("CH", remind12h);
+      setPushToken(token);
+      Alert.alert("Push enabled", token);
+    } catch (e: any) {
+      Alert.alert("Notifications", e?.message || "Failed to enable push");
+    }
+  };
+
+  const onToggle12h = async (val: boolean) => {
+    setRemind12h(val);
+    try {
+      if (pushToken) {
+        await registerForPushNotificationsAsync("CH", val);
+      }
+    } catch {}
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Settings</Text>
-      <View style={styles.row}><Text style={styles.label}>Default country</Text><Text style={styles.value}>🇨🇭 CH</Text></View>
+      <View style={styles.row}><Text style={styles.label}>Default country</Text><Text style={styles.value}>CH</Text></View>
       <View style={styles.row}><Text style={styles.label}>Theme</Text><Text style={styles.value}>Auto</Text></View>
       <View style={styles.row}><Text style={styles.label}>Reminders 7d</Text><Switch value={r7} onValueChange={setR7} /></View>
       <View style={styles.row}><Text style={styles.label}>Reminders 1d</Text><Switch value={r1d} onValueChange={setR1d} /></View>
       <View style={styles.row}><Text style={styles.label}>Reminders 1h</Text><Switch value={r1h} onValueChange={setR1h} /></View>
-      <View style={styles.row}><Text style={styles.label}>Display clubs like national teams</Text><Switch value={clubLikeNational} onValueChange={setClubLikeNational} /></View>
+      <View style={styles.row}><Text style={styles.label}>12h vote reminder</Text><Switch value={remind12h} onValueChange={onToggle12h} /></View>
+
+      <TouchableOpacity onPress={enablePush} style={styles.button}><Text style={styles.buttonTxt}>Enable Push (Expo)</Text></TouchableOpacity>
     </View>
   );
 }
@@ -26,4 +51,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#242436" },
   label: { color: "#c7d1df" },
   value: { color: "#fff", fontWeight: "700" },
+  button: { marginTop: 16, backgroundColor: "#4a56e2", paddingVertical: 12, borderRadius: 12, alignItems: "center" },
+  buttonTxt: { color: "#fff", fontWeight: "700" },
 });

@@ -31,6 +31,10 @@ const categoriesBySport: Record<string, { key: string; label: string }[]> = {
   ],
 };
 
+const COUNTRIES = ["CH", "DE", "AT", "FR", "IT", "GB", "US"] as const;
+
+type CountryCode = typeof COUNTRIES[number];
+
 export default function MatchDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -40,6 +44,8 @@ export default function MatchDetails() {
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [country, setCountry] = useState<CountryCode>("CH");
 
   const cats = useMemo(() => {
     if (!match?.sport) return [];
@@ -89,6 +95,15 @@ export default function MatchDetails() {
     }
   };
 
+  const scheduleVoteReminders = async () => {
+    try {
+      await apiPost(`/api/notifications/schedule_for_match`, { matchId: id });
+      alert("Reminders scheduled for this match.");
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
   if (loading)
     return (
       <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
@@ -104,10 +119,11 @@ export default function MatchDetails() {
     );
 
   const kickoff = new Date(match.startTime).toLocaleString();
+  const channels = (match.channels?.[country] as string[] | undefined) || [];
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 140 }}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 160 }}>
         <View style={styles.header}>
           {sportIcon(match.sport)}
           <Text style={styles.headerTxt}>{match.tournament}</Text>
@@ -124,8 +140,25 @@ export default function MatchDetails() {
         </BlurView>
 
         <BlurView intensity={30} tint="dark" style={styles.card}>
-          <Text style={styles.blockTitle}>Channels</Text>
-          <Text style={styles.channels}>Switzerland (CH): {(match.channels?.CH || []).join(", ")}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={styles.blockTitle}>Channels</Text>
+            <TouchableOpacity onPress={() => setCountryOpen((s) => !s)} style={styles.countryBtn}>
+              <Ionicons name="flag-outline" color="#fff" size={14} />
+              <Text style={styles.countryTxt}>{country}</Text>
+              <Ionicons name={countryOpen ? "chevron-up" : "chevron-down"} color="#fff" size={16} />
+            </TouchableOpacity>
+          </View>
+          {countryOpen && (
+            <View style={styles.countryList}>
+              {COUNTRIES.map((c) => (
+                <TouchableOpacity key={c} style={styles.countryItem} onPress={() => { setCountry(c); setCountryOpen(false); }}>
+                  <Ionicons name="flag-outline" color="#c7d1df" size={14} />
+                  <Text style={styles.countryItemTxt}>{c}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          <Text style={styles.channels}>{country}: {channels.length ? channels.join(", ") : "TBD"}</Text>
         </BlurView>
 
         <BlurView intensity={30} tint="dark" style={styles.card}>
@@ -143,7 +176,13 @@ export default function MatchDetails() {
         </BlurView>
 
         <BlurView intensity={30} tint="dark" style={styles.card}>
-          <Text style={styles.blockTitle}>Cast your vote</Text>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={styles.blockTitle}>Cast your vote</Text>
+            <TouchableOpacity onPress={scheduleVoteReminders} style={styles.smallBtn}>
+              <Ionicons name="notifications-outline" size={16} color="#fff" />
+              <Text style={styles.smallBtnTxt}>Schedule Vote Reminders</Text>
+            </TouchableOpacity>
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
             {cats.map((c) => (
               <TouchableOpacity key={c.key} onPress={() => setSelectedCat(c.key)} style={[styles.chip, selectedCat === c.key && styles.chipActive]}>
@@ -218,4 +257,11 @@ const styles = StyleSheet.create({
   barBg: { height: 8, backgroundColor: "#1b1f33", borderRadius: 6, overflow: "hidden" },
   bar: { height: 8, backgroundColor: "#9b8cff" },
   barTxt: { color: "#b9c4d6", fontSize: 12, marginTop: 4 },
+  countryBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#1f1b3a", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
+  countryTxt: { color: "#fff", fontWeight: "700" },
+  countryList: { marginTop: 10, borderRadius: 12, borderWidth: 1, borderColor: "#2a2a3c", overflow: "hidden" },
+  countryItem: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "#0f1220", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#242436" },
+  countryItemTxt: { color: "#c7d1df" },
+  smallBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#1f1b3a", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12 },
+  smallBtnTxt: { color: "#fff", fontWeight: "700" },
 });

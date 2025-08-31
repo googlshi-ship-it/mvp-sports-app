@@ -132,6 +132,9 @@ async def ensure_indexes():
     await db.ratings.create_index("matchId")
     await db.votes.create_index("matchId")
     await db.push_tokens.create_index("token", unique=True)
+    await db.notifications.create_index([("deliverAt", 1)])
+    await db.notifications.create_index([("status", 1)])
+    await db.notifications.create_index([("matchId", 1)])
 
 
 @app.on_event("startup")
@@ -150,6 +153,16 @@ def categories_for_sport(sport: str) -> List[str]:
     if sport == "ufc":
         return ["fight_of_the_night", "performance_of_the_night"]
     return ["mvp"]
+
+
+def match_duration_minutes(sport: str) -> int:
+    if sport == "football":
+        return 120
+    if sport == "basketball":
+        return 120
+    if sport == "ufc":
+        return 180
+    return 120
 
 
 # ---------------------------
@@ -322,16 +335,143 @@ class PushRegister(BaseModel):
     token: str
     platform: Literal['ios', 'android', 'web']
     country: Optional[str] = None
+    remind12h: Optional[bool] = False
 
 
 @api_router.post("/push/register")
 async def register_push(body: PushRegister):
     await db.push_tokens.update_one(
         {"token": body.token},
-        {"$set": {"platform": body.platform, "country": body.country, "updatedAt": datetime.utcnow()}},
+        {"$set": {"platform": body.platform, "country": body.country, "remind12h": body.remind12h or False, "updatedAt": datetime.utcnow()}},
         upsert=True,
     )
     return {"ok": True}
+
+
+# ----------- Notifications scheduling & dispatch -----------
+class ScheduleRequest(BaseModel):
+    matchId: str
+
+
+def build_final_message(match_doc: Dict) -> str:
+    home = match_doc.get("homeTeam", {}).get("name", "Home")
+    away = match_doc.get("awayTeam", {}).get("name", "Away")
+    score = match_doc.get("score")
+    score_str = None
+    if isinstance(score, dict):
+        h = score.get("home")
+        a = score.get("away")
+        if h is not None and a is not None:
+            score_str = f" {h}:{a}"
+    return f"{home} – {away}{score_str or ''}. Vote for MVP now!"
+
+
+def build_12h_message(match_doc: Dict) -> str:
+    home = match_doc.get("homeTeam", {}).get("name", "Home")
+    away = match_doc.get("awayTeam", {}).get("name", "Away")
+    return f"Don't miss out: Vote for MVP for {home} – {away}"
+
+
+@api_router.post("/notifications/schedule_for_match")
+async def schedule_for_match(body: ScheduleRequest):
+    try:
+        oid = ObjectId(body.matchId)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    match_doc = await db.matches.find_one({"_id": oid})
+    if not match_doc:
+        raise HTTPException(status_code=404, detail="Match not found")
+
+    start: datetime = match_doc.get("startTime")
+    if isinstance(start, str):
+        start = datetime.fromisoformat(start)
+    start = start.astimezone(timezone.utc)
+    finish = start + timedelta(minutes=match_duration_minutes(match_doc.get("sport", "")))
+
+    tokens = await db.push_tokens.find().to_list(10000)
+
+    # Create notifications entries
+    to_insert = []
+    for t in tokens:
+        to_insert.append({
+            "matchId": oid,
+            "token": t["token"],
+            "type": "final",
+            "deliverAt": finish,
+            "status": "pending",
+            "createdAt": datetime.utcnow(),
+        })
+        if t.get("remind12h"):
+            to_insert.append({
+                "matchId": oid,
+                "token": t["token"],
+                "type": "12h",
+                "deliverAt": finish + timedelta(hours=12),
+                "status": "pending",
+                "createdAt": datetime.utcnow(),
+            })
+
+    # Avoid duplicates: ensure unique by (matchId, token, type)
+    for n in to_insert:
+        exists = await db.notifications.find_one({
+            "matchId": oid,
+            "token": n["token"],
+            "type": n["type"],
+        })
+        if not exists:
+            await db.notifications.insert_one(n)
+
+    return {"scheduled": True, "finalAt": finish.isoformat()}
+
+
+EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+
+
+def chunk(arr, size):
+    for i in range(0, len(arr), size):
+        yield arr[i:i+size]
+
+
+@api_router.post("/notifications/dispatch_now")
+async def dispatch_now():
+    now = datetime.now(timezone.utc)
+    pending = await db.notifications.find({"deliverAt": {"$lte": now}, "status": "pending"}).to_list(10000)
+    if not pending:
+        return {"sent": 0}
+
+    # Group notifications by matchId to build message text
+    # Fetch matches once
+    match_ids = list({n["matchId"] for n in pending})
+    matches = {}
+    for mid in match_ids:
+        doc = await db.matches.find_one({"_id": mid})
+        if doc:
+            matches[str(mid)] = doc
+
+    total_sent = 0
+    for batch in chunk(pending, 90):
+        msgs = []
+        ids = []
+        for n in batch:
+            mdoc = matches.get(str(n["matchId"])) or {}
+            body = build_final_message(mdoc) if n["type"] == "final" else build_12h_message(mdoc)
+            msgs.append({
+                "to": n["token"],
+                "sound": "default",
+                "title": "MVP",
+                "body": body,
+                "data": {"matchId": str(n["matchId"]), "type": n["type"]},
+            })
+            ids.append(n["_id"])
+        try:
+            r = requests.post(EXPO_PUSH_URL, json=msgs, timeout=20, headers={"Accept": "application/json", "Content-Type": "application/json"})
+            # Mark sent regardless of individual token statuses for MVP
+            await db.notifications.update_many({"_id": {"$in": ids}}, {"$set": {"status": "sent", "sentAt": datetime.utcnow()}})
+            total_sent += len(batch)
+        except Exception as e:
+            logging.warning(f"Push send failed: {e}")
+            await db.notifications.update_many({"_id": {"$in": ids}}, {"$set": {"status": "error", "error": str(e)}})
+    return {"sent": total_sent}
 
 
 # ----------- Import from TheSportsDB -----------
