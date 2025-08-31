@@ -109,6 +109,35 @@ class StatusCheckCreate(BaseModel):
     client_name: str
 
 
+THESPORTSDB_KEY = os.environ.get("THESPORTSDB_KEY", "3")
+
+SPORT_MAP = {
+    "football": "soccer",
+    "basketball": "basketball",
+    "ufc": "fighting",
+}
+
+# Manual CH channel mapping by sport (simple MVP)
+CHANNELS_CH = {
+    "football": ["blue Sport", "SRF zwei"],
+    "basketball": ["SRF zwei"],
+    "ufc": ["blue Sport", "UFC Fight Pass"],
+}
+
+async def ensure_indexes():
+    await db.matches.create_index("startTime")
+    await db.ratings.create_index("matchId")
+    await db.votes.create_index("matchId")
+    await db.push_tokens.create_index("token", unique=True)
+
+
+@app.on_event("startup")
+async def on_startup():
+    try:
+        await ensure_indexes()
+    except Exception as e:
+        logger.warning(f"Index ensure failed: {e}")
+
 # ---------------------------
 # Routes
 # ---------------------------
