@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 import sys
 
 # Base URL from frontend/.env EXPO_PUBLIC_BACKEND_URL
-BASE_URL = "https://fanmvp-ratings.preview.emergentagent.com/api"
+BASE_URL = "https://sportsvote.preview.emergentagent.com/api"
 ADMIN_TOKEN = "CHANGEME"
 
 def test_root_endpoint():

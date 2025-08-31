@@ -1,57 +1,79 @@
 <analysis>
-The trajectory outlines the development of an MVP sports mobile application, starting from core features and iteratively building complexity. Initially, the AI engineer established a FastAPI backend with MongoDB and an Expo frontend, implementing match listings, details, basic ratings, and settings. Key early additions included a comprehensive fan voting UI for different sports, push notification reminders (final whistle and an opt-in 12-hour reminder), and a multi-country channel selector. A significant portion of the conversation focused on developing an extensive Admin Debug panel for managing and monitoring push notifications, featuring queue visibility, device diagnostics, and scheduling tools. The development path saw an abrupt shift after a SOMETHING_WENT_WRONG error, pivoting to a full user authentication and rating system, including JWT-based login/registration, user scoring based on vote alignment, and a leaderboard. The most recent task involves enforcing a strict 24-hour voting window, which has been partially implemented on the backend, with the frontend UI remaining.
+The AI engineer successfully built an MVP sports mobile application, progressing from a basic match listing and rating system to a sophisticated platform with user authentication, fan voting, push notifications, and an Admin Debug panel. Initial work focused on a FastAPI backend with MongoDB and an Expo frontend, evolving to include a strict 24-hour voting window. Subsequent development centered on implementing a structured competitions system (Leagues, Cups), integrating lineups and injuries into match details, and robust backend endpoints with timezone handling and admin protection. Most recently, the work shifted towards agent-only hosting via a Render Blueprint and a comprehensive UI/UX overhaul. The AI has prepared the codebase for deployment and implemented significant frontend UI changes, including a new card design system, typography, header profile, and demo mode. The current state reflects an active implementation of these extensive UI adjustments, with several file modifications still underway.
 </analysis>
 
 <product_requirements>
-The MVP mobile app combines sports schedules, TV channels, and fan ratings, featuring a modern iOS-inspired glassmorphism design with light/dark themes. Core screens include:
-1.  **Match List (Home)**: Matches grouped by date, showing time, teams (flags/colors for national), tournament (sport icon), subgroup, and TV channels for the user's default country (CH - Switzerland by default).
-2.  **Match Details**: Displays tournament/subgroup, teams, match time/status, a Channels block (default country first, dropdown for CH, DE, AT, FR, IT, GB, US, GE, ES, GR, showing TBD if unmapped). Post-match, users can Like/Dislike the match, submit votes for MVP, best scorer, assist, defender (and goalkeeper for Football, specific categories for UFC). Voting results are shown as percentages and totals. Reminders toggles (7d/1d/1h) are planned.
-3.  **My Teams**: Lists favorite teams/national teams and their next upcoming match.
-4.  **Settings**: Configures default country, theme (Auto/Light/Dark), 7d/1d/1h reminders, and an option to Display clubs like national teams. A Reduce effects toggle and 12h vote reminder toggle (default OFF) were added. An Admin Debug section (dev-only or feature-flagged) provides extensive controls for notifications and device diagnostics.
-**Notifications**: Push notifications are sent at final whistle (Vote for MVP now!) and an optional 12h reminder (if not voted, opt-in via Settings).
-**User System**: Implemented with email/password registration/login, JWT authentication, and a user rating system. User scores increase/decrease based on vote alignment with community averages. A leaderboard displays top 20 users by score. All voting/rating endpoints require authentication.
-**Voting Window**: A strict 24-hour voting window is enforced, starting at match final time. Voting is blocked outside this window.
+The MVP mobile application is a full-stack Expo/FastAPI/MongoDB solution for sports fans. It features:
+1.  **Match Listing**: Home screen displays matches grouped by date, with time, teams (flags/colors), tournament, subgroup, and TV channels (user's default country, e.g., Switzerland).
+2.  **Match Details**: Comprehensive match info, multi-country channel selector, fan voting (like/dislike, MVP, scorer, etc., with results as percentages), and push notification reminders. A strict 24-hour voting window, starting post-match, is enforced.
+3.  **My Teams**: Lists favorite teams and their upcoming matches.
+4.  **Settings**: Configures default country, theme (Light/Dark), reminders (7d/1d/1h), Display clubs like national teams, Reduce effects, and 12h vote reminder. An Admin Debug panel (dev-only) for notification management, device diagnostics, backend URL, device timezone, and a Force Demo Mode switch.
+5.  **User System**: Email/password registration/login, JWT authentication, user scoring based on vote alignment, and a leaderboard displaying top 20 users. All voting/rating requires authentication.
+6.  **Competitions**: Support for Championships (Leagues) and Cups with id, name, country, season, type, start/end dates. Matches are linked to competitions, displayed with local time.
+7.  **Lineups & Injuries**: Match details extended with formations, starters, bench players, and unavailable players (injuries, suspensions). Admin-only manual editing.
+8.  **UI/UX**: Modern iOS-inspired glassmorphism design with light/dark themes, strict global card layout (margin, padding, borderRadius), detailed glass styles (background, border, shadow, blur intensity), fixed card heights, and a defined typography scale. Profile removed from bottom tabs, replaced by top-right avatar opening a modal with Profile, Settings, Logout.
+9.  **Hosting**: One-click Render Blueprint for FastAPI backend and Expo Web static site, with MongoDB Atlas. Includes health/version endpoints, seeded demo data (6-8 matches, demo user demo@demo.com / Demo123!), and robust import handling.
 </product_requirements>
 
 <key_technical_concepts>
-- Expo (React Native for mobile development)
+- Expo (React Native for mobile apps)
 - FastAPI (Python backend)
 - MongoDB (Database)
 - Expo Router (File-based routing)
 - Zustand (Frontend state management)
-- TheSportsDB (External API for sports data)
-- Expo Push Notifications (Push notification service)
-- JWT (JSON Web Tokens for authentication)
+- TheSportsDB (External sports data API)
+- Expo Push Notifications
+- JWT (JSON Web Tokens)
 - bcrypt (Password hashing)
-- Glassmorphism (UI design paradigm)
+- Glassmorphism (UI design)
+- Render (Cloud hosting for backend/frontend)
+- MongoDB Atlas (Cloud database)
+- zoneinfo (Python timezone handling)
 </key_technical_concepts>
 
 <code_architecture>
-The project is structured with a  Expo app and a  FastAPI application.
+The project uses a standard full-stack structure with  (Expo) and  (FastAPI).
 
 
 
--   : This is the core FastAPI backend file. It contains all API endpoints, MongoDB model definitions, business logic for data import (TheSportsDB), match handling, ratings, fan voting, push notification scheduling/dispatching, user authentication (registration, login, current user, leaderboard), and the new strict voting window logic. It's frequently modified as features are added.
--   : This file likely serves as the main Matches List screen, displaying matches grouped by date with interactive cards. It handles data fetching, display, and navigation to match details.
--    and : These files define the navigation structure using Expo Router.  might define the root layout, while  specifically sets up the tab-based navigation (Matches, My Teams, Settings, Profile, Leaderboard).
--   : This is the Match Details screen, a dynamic route displaying specific match information, channels, voting UI (like/dislike, player voting, star ratings), and notification scheduling controls. It's a critical interactive screen.
--   : The Settings screen. It hosts general app settings (country, theme, reminders) and the comprehensive Admin Debug panel for notification management and device diagnostics.
--    and : These screens handle user authentication. They capture user input for email and password, interact with backend auth endpoints, and manage JWT token storage.
--    and : The Profile screen displays user-specific information (email, score, logout), while the Leaderboard screen shows top users by score.
--   : Centralized API client for interacting with the backend. It ensures consistent URL prefixing and token attachment.
--   : Defines the UI theme, including colors, typography, and potentially glassmorphism-related styles for light/dark modes.
--   : A Zustand store for managing authentication state (e.g., JWT token, user info, login/logout actions).
--    and : These likely manage notification-related state and utility functions, such as requesting permissions, registering tokens, and interacting with notification scheduling endpoints.
+-   : Core FastAPI backend. Contains all API endpoints for matches, users, authentication, ratings, fan voting, push notifications, and the strict 24h voting window logic. Recently extended for competitions, lineups/injuries (models, CRUD, seeding), health/version endpoints, and graceful TheSportsDB import handling.
+-   : (NEW) Render Blueprint configuration file for one-click deployment of backend and static frontend.
+-   : (NEW) Example environment variables for the backend, including new , , , .
+-   : Redirects to the main tabs, likely  (previously main match list, now likely redirected or replaced by  or  as the main tab).
+-   : Defines the tab-based navigation. Modified to add the Competitions tab and to potentially remove Profile (now accessed via header avatar).
+-   : (NEW) Displays a list of all available competitions. Implemented with skeleton loaders, pull-to-refresh, error handling, and navigation to competition details.
+-   : (NEW) Displays details for a specific competition, including a list of its matches grouped by date, showing local times. Handles  parameter.
+-   : Match Details screen. Enhanced with new Lineups and Unavailable cards, Try again buttons, Share button stub, admin JSON editor (dev-only), and improved error handling.
+-    & : User authentication screens.
+-   : Settings screen. Expanded to include Admin diagnostics card (backend URL, device timezone, Force Demo Mode switch).
+-   : (MOVED/RENAMED) Profile screen, now likely part of a modal accessed from the header avatar.
+-   : Leaderboard screen.
+-   : (NEW - stub) Placeholder route for future Team News feature.
+-   : (MOVED/RENAMED from ) Centralized API client. Updated to include timezone parameter for requests,  helper, and demo mode fallbacks.
+-   : Defines UI theme, including colors, typography, and now the detailed global card styling (glassmorphism properties for light/dark, border radius, padding, etc.).
+-   : Zustand store for authentication state.
+-   : Zustand store for UI state, now including  and .
+-    & : (NEW) Zustand store and data for local demo content, used when Demo Mode is active or network fails.
+-   : (NEW) Deployment guide for the one-click Render blueprint.
 </code_architecture>
 
 <pending_tasks>
--   **Frontend implementation for strict 24h voting cutoff**: The UI needs to show a countdown, disable voting controls, display Voting closed badges, and gracefully handle 403 errors when voting is not open or closed.
+-   Provide 3 screenshots (Matches list, Competition list, Match Details) in both light and dark themes, showcasing the new UI.
+-   Proceed with the one-click Render deploy.
+-   Run automated smoke checks (backend + frontend) as specified.
+-   Share Public Backend URL, Expo Web URL, and smoke test results.
 </pending_tasks>
 
 <current_work>
-The application currently features a robust backend (FastAPI, MongoDB) and a feature-rich Expo frontend. Users can register and log in, with JWTs securing interactions. A user rating system is integrated, where scores adjust based on voting alignment with community averages, displayed on a leaderboard. The app provides detailed match information, including fan voting options for various sports (MVP, scorer, defender, etc., plus specific categories like Goalkeeper for Football), and a multi-country channel selector. A comprehensive push notification system is in place, scheduling reminders for match events and post-match voting, with a background dispatcher and admin controls for monitoring and triggering. Safeguards like skipping 12h reminders if a user has already voted are implemented. The most recent task was to enforce a strict 24-hour voting window for matches. The backend has been updated to calculate  and  for each match, block unauthorized voting attempts outside this window, and include this timing information in match data. However, the frontend UI components to visualize this countdown, disable interactive elements when voting is closed, and display appropriate error messages are yet to be implemented.
+The AI engineer is currently in the process of implementing a comprehensive UI/UX overhaul, strictly adhering to a new set of design tokens and layout rules provided by the user. This involves adjusting global card styling (e.g., , specific  and  for light/dark themes,  intensities for iOS, shadow/elevation for Android), fixed heights for competition (140) and match cards (172), and defining a precise typography scale (TitleXL, TitleM, BodyM, BodyR, CaptionM, CaptionR).
+
+Key changes being applied include:
+-   **Global Card Styling**: Updating existing and new cards (Matches list, Competitions list, all Match Details sections like Header, Lineups, Unavailable, Channels, Rate, Cast your vote, Player ratings, Fan voting) to use the new tokens.
+-   **Header Profile Entry**: Removing Profile from the bottom tabs and replacing it with a top-right avatar (circle 28, hitbox 44) on main tabs. Tapping this avatar will open a modal containing Profile details (email, score), Settings, and Logout options.
+-   **Share & Long-press**: Keeping the Share button (top-right on Match card/details) with a Copy Link fallback. The long-press sheet on match rows will continue to offer Share, Add to Calendar, and Copy Link actions.
+-   **File Edits**: Recent activity (Chat 176-186) shows file modifications in  (for new UI tokens), ,  (for tabs structure, likely removing Profile), , , , , , and . These edits are directly related to applying the new UI styles and updating navigation as requested. The last message confirms an edit to  was successful, indicating the UI implementation is still actively being applied.
 </current_work>
 
 <optional_next_step>
-Implement the frontend UI for the strict 24h voting cutoff, showing countdowns and disabling controls.
+Capture 3 screenshots (Matches list, Competition list, Match Details) in both light and dark themes.
 </optional_next_step>
