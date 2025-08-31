@@ -389,7 +389,7 @@ THESPORTSDB_KEY = os.environ.get("THESPORTSDB_KEY", "3")
 SPORT_MAP = {"football": "Soccer", "basketball": "Basketball", "ufc": "Fighting"}
 
 
-def categories_for_sport(sport: str) -&gt; List[str]:
+def categories_for_sport(sport: str) -> List[str]:
     if sport == "football":
         return ["mvp", "scorer", "assist", "defender", "goalkeeper"]
     if sport == "basketball":
