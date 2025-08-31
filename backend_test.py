@@ -723,6 +723,66 @@ def test_matches_grouped_with_timezone():
         print(f"   ❌ Error: {e}")
         return False
 
+def rivalry_smoke_tests():
+    """Run backend smoke tests including the new rivalry admin endpoint"""
+    print("🚀 Starting Backend Smoke Tests - Including Rivalry Admin Endpoint")
+    print(f"Base URL: {BASE_URL}")
+    print("=" * 80)
+    
+    results = {}
+    
+    # ===== STEP 1: GET /api/ (expect 200) =====
+    results["root_health"] = test_root_endpoint()
+    
+    # ===== STEP 2: GET /api/version (expect 200 with fields) =====
+    results["version"] = test_version_endpoint()
+    
+    # ===== STEP 3: GET /api/matches (expect 200; at least one match will include a rivalry object) =====
+    match_id = test_matches_list()
+    results["matches_list"] = bool(match_id)
+    
+    # ===== STEP 4: Find a seeded rivalry match and capture its _id =====
+    rivalry_match_id, rivalry_match_data = find_rivalry_match()
+    results["find_rivalry_match"] = bool(rivalry_match_id)
+    
+    if rivalry_match_id:
+        print(f"\n✅ Using rivalry match ID: {rivalry_match_id}")
+        
+        # ===== STEP 5: POST /api/matches/{id}/rivalry with admin token =====
+        results["rivalry_admin_update"] = test_rivalry_admin_endpoint(rivalry_match_id)
+        
+        # ===== STEP 6: GET /api/matches/{id} to confirm rivalry is updated =====
+        results["rivalry_verification"] = verify_rivalry_update(rivalry_match_id)
+    else:
+        print("\n❌ No rivalry match found - skipping rivalry admin tests")
+        results["rivalry_admin_update"] = False
+        results["rivalry_verification"] = False
+    
+    # ===== STEP 7: GET /api/matches/grouped?country=CH (expect 200) =====
+    grouped_data = test_matches_grouped()
+    results["matches_grouped_ch"] = bool(grouped_data)
+    
+    # ===== SUMMARY =====
+    print("\n" + "=" * 80)
+    print("📊 BACKEND SMOKE TESTS SUMMARY - RIVALRY ADMIN ENDPOINT")
+    print("=" * 80)
+    
+    passed = sum(1 for result in results.values() if result)
+    total = len(results)
+    
+    for test_name, result in results.items():
+        status = "✅ PASS" if result else "❌ FAIL"
+        print(f"  {test_name:25} {status}")
+    
+    print(f"\n🏆 OVERALL: {passed}/{total} tests passed")
+    
+    if passed == total:
+        print("🎉 All backend smoke tests passed!")
+        return 0
+    else:
+        print("⚠️  Some smoke tests failed")
+        return 1
+
 def main():
     """Run all backend tests in sequence - including new Competitions + Lineups/Injuries features"""
     print("🚀 Starting Backend API Tests - Competitions + Lineups/Injuries Focus")
