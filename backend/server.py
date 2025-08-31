@@ -221,6 +221,7 @@ async def get_match(match_id: str):
     m = await db.matches.find_one({"_id": oid})
     if not m:
         raise HTTPException(status_code=404, detail="Match not found")
+    m["_id"] = str(m["_id"])  # Convert ObjectId to string
     return MatchDB(**m)
 
 
