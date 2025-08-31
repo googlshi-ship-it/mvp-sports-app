@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { BlurView } from "expo-blur";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { apiGet, apiPost } from "../../src/api/client";
+import { getRegisteredPushToken } from "../../src/notifications";
 
 function sportIcon(sport?: string) {
   if (sport === "football") return <Ionicons name="football-outline" size={18} color="#8a7cff" />;
@@ -46,6 +47,7 @@ export default function MatchDetails() {
   const [submitting, setSubmitting] = useState(false);
   const [countryOpen, setCountryOpen] = useState(false);
   const [country, setCountry] = useState<CountryCode>("CH");
+  const [scheduled, setScheduled] = useState(false);
 
   const cats = useMemo(() => {
     if (!match?.sport) return [];
@@ -84,7 +86,8 @@ export default function MatchDetails() {
     if (!selectedCat || !name.trim()) return;
     setSubmitting(true);
     try {
-      await apiPost(`/api/matches/${id}/vote`, { category: selectedCat, player: name.trim() });
+      const token = getRegisteredPushToken();
+      await apiPost(`/api/matches/${id}/vote`, { category: selectedCat, player: name.trim(), token });
       const v = await apiGet(`/api/matches/${id}/votes`);
       setVotes(v);
       setName("");
@@ -98,7 +101,7 @@ export default function MatchDetails() {
   const scheduleVoteReminders = async () => {
     try {
       await apiPost(`/api/notifications/schedule_for_match`, { matchId: id });
-      alert("Reminders scheduled for this match.");
+      setScheduled(true);
     } catch (e) {
       console.warn(e);
     }
@@ -123,7 +126,7 @@ export default function MatchDetails() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 160 }}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 170 }}>
         <View style={styles.header}>
           {sportIcon(match.sport)}
           <Text style={styles.headerTxt}>{match.tournament}</Text>
@@ -178,10 +181,13 @@ export default function MatchDetails() {
         <BlurView intensity={30} tint="dark" style={styles.card}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <Text style={styles.blockTitle}>Cast your vote</Text>
-            <TouchableOpacity onPress={scheduleVoteReminders} style={styles.smallBtn}>
-              <Ionicons name="notifications-outline" size={16} color="#fff" />
-              <Text style={styles.smallBtnTxt}>Schedule Vote Reminders</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              {scheduled && <Text style={styles.subtle}>Reminders scheduled</Text>}
+              <TouchableOpacity onPress={scheduleVoteReminders} style={styles.smallBtn}>
+                <Ionicons name="notifications-outline" size={16} color="#fff" />
+                <Text style={styles.smallBtnTxt}>Schedule Vote Reminders</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
             {cats.map((c) => (
@@ -235,6 +241,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0a0a0f" },
   header: { flexDirection: "row", alignItems: "center", padding: 16, gap: 8 },
   headerTxt: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  subtle: { color: "#9aa3b2", fontSize: 12 },
   subgroup: { color: "#9aa3b2", fontSize: 14 },
   card: { marginHorizontal: 16, marginBottom: 12, padding: 16, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
   time: { color: "#fff", fontSize: 16, fontWeight: "700" },

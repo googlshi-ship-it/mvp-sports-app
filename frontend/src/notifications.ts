@@ -3,6 +3,12 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { apiPost } from "./api/client";
 
+let cachedToken: string | null = null;
+
+export function getRegisteredPushToken() {
+  return cachedToken;
+}
+
 export async function registerForPushNotificationsAsync(country: string = "CH", remind12h: boolean = false) {
   let token: string | null = null;
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -22,9 +28,10 @@ export async function registerForPushNotificationsAsync(country: string = "CH", 
     });
   }
 
-  const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.expoConfig?.extra?.projectId;
+  const projectId = (Constants.expoConfig as any)?.extra?.eas?.projectId || (Constants.expoConfig as any)?.extra?.projectId;
   const pushToken = await Notifications.getExpoPushTokenAsync({ projectId: projectId as string | undefined });
   token = pushToken.data;
+  cachedToken = token;
 
   await apiPost("/api/push/register", {
     token,

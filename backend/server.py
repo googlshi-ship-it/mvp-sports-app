@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 import requests
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -99,6 +100,7 @@ VoteCategory = Literal[
 class VoteInput(BaseModel):
     category: VoteCategory
     player: str
+    token: Optional[str] = None  # optional device push token to attribute vote
 
 
 class StatusCheck(BaseModel):
@@ -135,6 +137,7 @@ async def ensure_indexes():
     await db.notifications.create_index([("deliverAt", 1)])
     await db.notifications.create_index([("status", 1)])
     await db.notifications.create_index([("matchId", 1)])
+    await db.device_votes.create_index([("matchId", 1), ("token", 1)], unique=True)
 
 
 @app.on_event("startup")
@@ -143,6 +146,8 @@ async def on_startup():
         await ensure_indexes()
     except Exception as e:
         logger.warning(f"Index ensure failed: {e}")
+    # Start background dispatcher (every 90 seconds)
+    asyncio.create_task(_dispatch_loop())
 
 
 def categories_for_sport(sport: str) -> List[str]:
@@ -295,6 +300,18 @@ async def vote_match(match_id: str, body: VoteInput):
 
     path = f"votes.{body.category}.{body.player}"
     await db.votes.update_one({"matchId": oid}, {"$inc": {path: 1}}, upsert=True)
+
+    # Record device vote if token provided
+    if body.token:
+        try:
+            await db.device_votes.update_one(
+                {"matchId": oid, "token": body.token},
+                {"$set": {"matchId": oid, "token": body.token, "updatedAt": datetime.utcnow()}},
+                upsert=True,
+            )
+        except Exception:
+            pass
+
     doc = await db.votes.find_one({"matchId": oid})
 
     def to_pct(counter: Dict[str, int]):
@@ -432,15 +449,13 @@ def chunk(arr, size):
         yield arr[i:i+size]
 
 
-@api_router.post("/notifications/dispatch_now")
-async def dispatch_now():
+async def _dispatch_now_internal():
     now = datetime.now(timezone.utc)
     pending = await db.notifications.find({"deliverAt": {"$lte": now}, "status": "pending"}).to_list(10000)
     if not pending:
-        return {"sent": 0}
+        return 0
 
     # Group notifications by matchId to build message text
-    # Fetch matches once
     match_ids = list({n["matchId"] for n in pending})
     matches = {}
     for mid in match_ids:
@@ -453,6 +468,12 @@ async def dispatch_now():
         msgs = []
         ids = []
         for n in batch:
+            # Safeguard: skip 12h if this device already voted
+            if n["type"] == "12h":
+                dv = await db.device_votes.find_one({"matchId": n["matchId"], "token": n["token"]})
+                if dv:
+                    await db.notifications.update_one({"_id": n["_id"]}, {"$set": {"status": "skipped_voted", "updatedAt": datetime.utcnow()}})
+                    continue
             mdoc = matches.get(str(n["matchId"])) or {}
             body = build_final_message(mdoc) if n["type"] == "final" else build_12h_message(mdoc)
             msgs.append({
@@ -463,15 +484,32 @@ async def dispatch_now():
                 "data": {"matchId": str(n["matchId"]), "type": n["type"]},
             })
             ids.append(n["_id"])
+        if not msgs:
+            continue
         try:
             r = requests.post(EXPO_PUSH_URL, json=msgs, timeout=20, headers={"Accept": "application/json", "Content-Type": "application/json"})
-            # Mark sent regardless of individual token statuses for MVP
             await db.notifications.update_many({"_id": {"$in": ids}}, {"$set": {"status": "sent", "sentAt": datetime.utcnow()}})
-            total_sent += len(batch)
+            total_sent += len(msgs)
         except Exception as e:
             logging.warning(f"Push send failed: {e}")
             await db.notifications.update_many({"_id": {"$in": ids}}, {"$set": {"status": "error", "error": str(e)}})
-    return {"sent": total_sent}
+    return total_sent
+
+
+@api_router.post("/notifications/dispatch_now")
+async def dispatch_now():
+    sent = await _dispatch_now_internal()
+    return {"sent": sent}
+
+
+async def _dispatch_loop():
+    # MVP loop: dispatch every 90 seconds
+    while True:
+        try:
+            await _dispatch_now_internal()
+        except Exception as e:
+            logging.warning(f"Dispatch loop error: {e}")
+        await asyncio.sleep(90)
 
 
 # ----------- Import from TheSportsDB -----------
