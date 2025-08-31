@@ -75,6 +75,9 @@ export default function MatchesScreen() {
             <View style={styles.tournamentRow}>
               {iconFor(item.sport)}
               <Text style={styles.tournament} numberOfLines={1}> {item.tournament}</Text>
+              {RIVALRY_UI && (item as any)?.rivalry?.enabled ? (
+                <View style={styles.derbyChip}><Text style={styles.derbyTxt}>🔥 {(item as any)?.rivalry?.tag || "Derby"}</Text></View>
+              ) : null}
             </View>
           </View>
           {item.subgroup ? <Text style={styles.subgroup}>{item.subgroup}</Text> : null}
