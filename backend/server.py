@@ -744,7 +744,7 @@ async def submit_player_rating(match_id: str, body: Dict, current=Depends(get_us
     if m.get("sport") != "football":
         raise HTTPException(status_code=400, detail="Player ratings only for football matches")
 
-    def _clamp10(x: int) -&gt; int:
+    def _clamp10(x: int) -> int:
         try:
             x = int(x)
         except Exception:
