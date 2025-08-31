@@ -299,10 +299,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Backend: Import TheSportsDB"
-    - "Backend: Matches grouped/detail"
-    - "Backend: Ratings + Votes"
-  stuck_tasks: []
+    - "Backend: Competitions + Lineups/Injuries features"
+    - "Backend: Admin overrides for lineups and injuries"
+    - "Backend: Timezone support in match endpoints"
+  stuck_tasks:
+    - "Matches grouped with timezone (existing endpoint compatibility)"
   test_all: false
   test_priority: "high_first"
 
@@ -311,3 +312,5 @@ agent_communication:
     message: "Please test backend endpoints in order: GET /api/, POST /api/import/thesportsdb (days=1), GET /api/matches/grouped?country=CH, create a sample match via POST /api/matches, GET that match by id, POST rate/vote and GET votes."
   - agent: "testing"
     message: "✅ Backend testing completed successfully! All high-priority endpoints are working correctly. Fixed critical Pydantic v2 ObjectId compatibility issue and duplicate sourceId constraint. All 9 test cases passed including: root health check, TheSportsDB import, match CRUD operations, ratings, and voting system. Backend is ready for production use."
+  - agent: "testing"
+    message: "✅ Competitions + Lineups/Injuries backend testing completed! 10/11 core tests passed. Successfully tested: (1) GET /api/ health check, (2) GET /api/competitions with 2 seeded competitions, (3) GET /api/competitions/{id} with proper fields, (4) GET /api/competitions/{id}/matches with timezone support, (5) GET /api/matches/{id}?include=lineups with complete lineups object, (6) GET /api/matches/{id}/lineups endpoint, (7) POST /api/matches/{id}/lineups admin override, (8) POST /api/matches/{id}/injuries admin override. Minor issue: GET /api/matches/grouped?tz=Europe/Madrid has ObjectId serialization error (500 status) but core functionality works. Fixed ObjectId serialization in competition matches endpoints."
