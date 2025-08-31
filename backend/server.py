@@ -172,9 +172,9 @@ async def matches_grouped(country: Optional[str] = None):
         if isinstance(st, str):
             st = datetime.fromisoformat(st)
         bucket = None
-        if st &lt;= today_end:
+        if st <= today_end:
             bucket = "today"
-        elif st &lt;= tomorrow_end:
+        elif st <= tomorrow_end:
             bucket = "tomorrow"
         else:
             bucket = "week"
