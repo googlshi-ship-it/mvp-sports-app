@@ -343,6 +343,7 @@ class Team(BaseModel):
     type: Literal["club", "national"]
     name: str
     countryCode: Optional[str] = None
+    logoUrl: Optional[str] = None
 
 
 class Score(BaseModel):
