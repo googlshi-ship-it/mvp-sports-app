@@ -97,7 +97,7 @@ def compute_final_and_window(m: Dict) -> Dict:
 def with_voting_status(m: Dict) -> Dict:
     now = datetime.now(timezone.utc)
     comp = compute_final_and_window(m)
-    is_open = comp["voting_open_at"] &lt;= now &lt; comp["voting_close_at"]
+    is_open = comp["voting_open_at"] <= now < comp["voting_close_at"]
     return {
         **{k: comp[k].isoformat() for k in comp},
         "now": now.isoformat(),
