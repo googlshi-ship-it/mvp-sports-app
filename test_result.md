@@ -411,6 +411,8 @@ agent_communication:
   - agent: "testing"
     message: "✅ Re-test completed for GET /api/matches/grouped endpoint. Both requested scenarios now working perfectly: (1) GET /api/matches/grouped?tz=Europe/Madrid returns 200 with timezone-adjusted start_time_local fields, (2) GET /api/matches/grouped?country=CH returns 200 with proper channelsForCountry arrays. The ObjectId serialization issue has been resolved. Found 7 total matches across today/tomorrow/week buckets."
         comment: "❌ Minor issue: GET /api/matches/grouped?tz=Europe/Madrid returns 500 error due to ObjectId serialization in datetime comparison. Core functionality works but timezone parameter causes issues. Needs ObjectId/datetime serialization fix."
+  - agent: "testing"
+    message: "✅ Backend smoke tests including rivalry admin endpoint completed successfully! All 7 smoke tests passed: (1) GET /api/ returns 200 with message field, (2) GET /api/version returns 200 with version/gitSha fields, (3) GET /api/matches returns 200 with rivalry objects, (4) Found Barcelona vs Real Madrid rivalry match (ID: 68b3b5b03fa3e9183e9cf069), (5) POST /api/matches/{id}/rivalry with X-Admin-Token: CHANGEME and body {enabled: true, intensity: 2, tag: 'Test Derby'} returns 200 with updated rivalry, (6) GET /api/matches/{id} confirms rivalry update persisted correctly, (7) GET /api/matches/grouped?country=CH returns 200 with proper today/tomorrow/week arrays. New rivalry admin endpoint is fully functional and ready for production use."
 frontend:
   - task: "Expo Router tabs + navigation"
     implemented: true
