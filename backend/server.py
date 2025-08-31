@@ -14,6 +14,7 @@ import asyncio
 from jose import jwt, JWTError
 from passlib.hash import bcrypt
 from zoneinfo import ZoneInfo
+import re
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -44,8 +45,6 @@ logger = logging.getLogger(__name__)
 
 # ---------------------------
 # Utils
-import re
-
 # ---------------------------
 
 def to_utc(dt: datetime) -> datetime:
@@ -158,18 +157,22 @@ async def seed_competitions_and_matches():
     la_liga = {
         "name": "La Liga",
         "country": "Spain",
+        "countryCode": "ES",
         "season": "2025",
         "type": "league",
         "start_date": datetime(2025, 8, 15, tzinfo=timezone.utc),
         "end_date": datetime(2026, 5, 31, tzinfo=timezone.utc),
+        "slug": "la-liga-2025",
     }
     ucl = {
         "name": "UEFA Champions League",
         "country": "Europe",
+        "countryCode": "EU",
         "season": "2025",
         "type": "cup",
         "start_date": datetime(2025, 6, 1, tzinfo=timezone.utc),
         "end_date": datetime(2026, 5, 31, tzinfo=timezone.utc),
+        "slug": "uefa-champions-league-2025",
     }
     res1 = await db.competitions.insert_one(la_liga)
     res2 = await db.competitions.insert_one(ucl)
@@ -190,29 +193,30 @@ async def seed_competitions_and_matches():
             "sourceId": f"seed_{uuid.uuid4()}",
             "competition_id": comp_id,
             "stadium": "Demo Stadium",
+            "venue": "Madrid",
             # lineups/injuries demo
             "formation_home": "4-3-3",
             "formation_away": "4-2-3-1",
             "lineup_home": [
-                {"number": "1", "name": "GK Home", "pos": "GK", "role": "starter"},
-                {"number": "9", "name": "CF Home", "pos": "FW", "role": "starter"},
+                {"number": "1", "name": "GK Home", "pos": "GK", "role": "starter", "playerId": "home_gk", "nationalityCode": "ES"},
+                {"number": "9", "name": "CF Home", "pos": "FW", "role": "starter", "playerId": "home_cf", "nationalityCode": "ES"},
             ],
             "lineup_away": [
-                {"number": "1", "name": "GK Away", "pos": "GK", "role": "starter"},
-                {"number": "10", "name": "CF Away", "pos": "FW", "role": "starter"},
+                {"number": "1", "name": "GK Away", "pos": "GK", "role": "starter", "playerId": "away_gk", "nationalityCode": "ES"},
+                {"number": "10", "name": "CF Away", "pos": "FW", "role": "starter", "playerId": "away_cf", "nationalityCode": "ES"},
             ],
             "bench_home": [
-                {"number": "12", "name": "Sub H1", "pos": "MF", "role": "sub"}
+                {"number": "12", "name": "Sub H1", "pos": "MF", "role": "sub", "nationalityCode": "ES"}
             ],
             "bench_away": [
-                {"number": "12", "name": "Sub A1", "pos": "MF", "role": "sub"}
+                {"number": "12", "name": "Sub A1", "pos": "MF", "role": "sub", "nationalityCode": "ES"}
             ],
             "unavailable_home": [
-                {"name": "Injured H1", "reason": "Hamstring", "type": "injury", "status": "out"},
-                {"name": "Doubt H2", "reason": "Knock", "type": "injury", "status": "doubtful"},
+                {"name": "Injured H1", "reason": "Hamstring", "type": "injury", "status": "out", "nationalityCode": "ES"},
+                {"name": "Doubt H2", "reason": "Knock", "type": "injury", "status": "doubtful", "nationalityCode": "ES"},
             ],
             "unavailable_away": [
-                {"name": "Susp A1", "reason": "Red card", "type": "suspension", "status": "out"}
+                {"name": "Susp A1", "reason": "Red card", "type": "suspension", "status": "out", "nationalityCode": "ES"}
             ],
             "lineups_status": "probable",
             "lineups_updated_at": datetime.now(timezone.utc),
@@ -288,6 +292,7 @@ class MatchBase(BaseModel):
     source: Optional[str] = None
     sourceId: Optional[str] = None
     stadium: Optional[str] = None
+    venue: Optional[str] = None
     competition_id: Optional[str] = None  # stored as ObjectId string in API
     # Persist voting window
     finalAt: Optional[datetime] = None
@@ -401,7 +406,7 @@ async def update_user_score(user_id: ObjectId, delta: int):
 
 
 # -------- Static Config --------
-THESPORTSDB_KEY = os.environ.get("THESPORTSDB_KEY", "3")
+THESPORTSDB_KEY = os.environ.get("THESPORTSDB_API_KEY") or os.environ.get("THESPORTSDB_KEY") or "1"
 SPORT_MAP = {"football": "Soccer", "basketball": "Basketball", "ufc": "Fighting"}
 
 
@@ -485,10 +490,14 @@ async def leaderboard():
 class CompetitionCreate(BaseModel):
     name: str
     country: str
+    countryCode: Optional[str] = None
     season: str
     type: Literal["league", "cup"]
     start_date: datetime
     end_date: datetime
+    slug: Optional[str] = None
+    logoUrl: Optional[str] = None
+    organizer: Optional[str] = None
 
 
 class CompetitionDB(CompetitionCreate):
@@ -885,13 +894,17 @@ async def post_injuries(match_id: str, body: Dict, admin=Depends(require_admin))
 
 
 # ---------------------------
-# TheSportsDB Importer (skeleton with idempotent upsert)
+# TheSportsDB Importer (graceful)
 # ---------------------------
 @api_router.post("/import/thesportsdb")
 async def import_thesportsdb(days: int = 1):
-    # Minimal stub to keep endpoint available; real mapping omitted in this MVP increment.
-    # Idempotent no-op import.
-    return {"created": 0, "updated": 0}
+    try:
+        # Placeholder: keep as no-op in this increment; adapter can be plugged in here.
+        # Intentionally not calling external API to avoid failures in this environment.
+        return {"created": 0, "updated": 0, "ok": True, "provider": "TheSportsDB", "days": int(days)}
+    except Exception as e:
+        logger.warning(f"TheSportsDB import failed: {e}")
+        return {"error": "import_failed", "reason": "network_or_api"}
 
 
 # Include router and middleware

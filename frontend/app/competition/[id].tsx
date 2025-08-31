@@ -35,6 +35,7 @@ function groupByDate(matches: any[]): { title: string; data: any[] }[] {
 export default function CompetitionDetail() {
   const { id } = useLocalSearchParams();
   const [comp, setComp] = useState<any | null>(null);
+  thead
   const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -58,9 +59,18 @@ export default function CompetitionDetail() {
   const onRefresh = () => { setRefreshing(true); load(); };
 
   if (loading) return (<View style={styles.center}><ActivityIndicator color="#9b8cff" /></View>);
-  if (!comp) return (<View style={styles.center}><Text style={{ color: "#fff" }}>Not found</Text></View>);
+  if (!comp) return (
+    <View style={styles.center}>
+      <Text style={{ color: "#fff", marginBottom: 8 }}>Not found</Text>
+      <TouchableOpacity onPress={load} style={styles.retryBtn}><Text style={styles.retryTxt}>Retry</Text></TouchableOpacity>
+    </View>
+  );
 
   const sections = groupByDate(matches);
+
+  const Retry = () => (
+    <TouchableOpacity onPress={load} style={styles.retryBtn}><Text style={styles.retryTxt}>Retry</Text></TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
@@ -73,7 +83,7 @@ export default function CompetitionDetail() {
         <TypeBadge type={comp?.type} />
       </View>
 
-      {error ? <Text style={[styles.meta, { textAlign: "center", paddingBottom: 8 }]}>{error}</Text> : null}
+      {error ? <View style={{ paddingHorizontal: 16, marginBottom: 8 }}><Text style={[styles.meta, { textAlign: "center", marginBottom: 8 }]}>{error}</Text><Retry /></View> : null}
 
       <FlatList
         data={sections}
@@ -94,7 +104,7 @@ export default function CompetitionDetail() {
           </View>
         )}
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        ListEmptyComponent={<Text style={styles.empty}>No upcoming matches</Text>}
+        ListEmptyComponent={<View><Text style={styles.empty}>No upcoming matches</Text><Retry /></View>}
       />
     </View>
   );
@@ -114,4 +124,6 @@ const styles = StyleSheet.create({
   time: { color: "#fff", fontWeight: "700" },
   matchLine: { color: "#fff", marginTop: 4, fontSize: 16, fontWeight: "700" },
   empty: { color: "#9aa3b2", textAlign: "center", padding: 16 },
+  retryBtn: { alignSelf: "center", marginTop: 8, backgroundColor: "#1f1b3a", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
+  retryTxt: { color: "#fff", fontWeight: "700" },
 });

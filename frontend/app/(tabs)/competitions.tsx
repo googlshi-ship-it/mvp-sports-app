@@ -46,7 +46,7 @@ export default function Competitions() {
   if (loading) return (<View style={styles.center}><ActivityIndicator color="#9b8cff" /></View>);
 
   const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity style={styles.row} onPress={() => router.push(`/competition/${item._id}`)}>
+    <TouchableOpacity style={styles.row} onPress={() => router.push(`/competition/${item?._id}`)}>
       {item?.logoUrl ? (
         <Image source={{ uri: item.logoUrl }} style={styles.logo} resizeMode="contain" />
       ) : (
@@ -62,9 +62,18 @@ export default function Competitions() {
     </TouchableOpacity>
   );
 
+  const Retry = () => (
+    <TouchableOpacity onPress={load} style={styles.retryBtn}><Text style={styles.retryTxt}>Retry</Text></TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
-      {error ? <Text style={[styles.meta, { textAlign: "center", padding: 8 }]}>{error}</Text> : null}
+      {error ? (
+        <View style={{ padding: 16 }}>
+          <Text style={[styles.meta, { textAlign: "center", marginBottom: 8 }]}>{error}</Text>
+          <Retry />
+        </View>
+      ) : null}
       <FlatList
         data={items}
         keyExtractor={(it) => it?._id || `${it?.name}-${it?.season}`}
@@ -72,7 +81,7 @@ export default function Competitions() {
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}
-        ListEmptyComponent={<Text style={styles.empty}>No competitions</Text>}
+        ListEmptyComponent={<View><Text style={styles.empty}>No competitions</Text><Retry /></View>}
       />
     </View>
   );
@@ -88,4 +97,6 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
   badgeTxt: { fontWeight: "800", fontSize: 12 },
   empty: { color: "#9aa3b2", textAlign: "center", padding: 16 },
+  retryBtn: { alignSelf: "center", marginTop: 8, backgroundColor: "#1f1b3a", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
+  retryTxt: { color: "#fff", fontWeight: "700" },
 });

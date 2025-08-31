@@ -130,7 +130,12 @@ export default function MatchDetails() {
   const cardProps: any = reduceEffects ? {} : { intensity: 30, tint: "dark" };
 
   if (loading) return (<View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}><ActivityIndicator color="#9b8cff" /></View>);
-  if (!match) return (<View style={styles.container}><Text style={{ color: "#fff", padding: 16 }}>Not found</Text></View>);
+  if (!match) return (
+    <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+      <Text style={{ color: "#fff", marginBottom: 8 }}>Not found</Text>
+      <TouchableOpacity onPress={load} style={styles.retryBtn}><Text style={styles.smallBtnTxt}>Retry</Text></TouchableOpacity>
+    </View>
+  );
 
   const kickoff = match?.start_time_local ? new Date(match.start_time_local).toLocaleString() : (match?.startTime ? new Date(match.startTime).toLocaleString() : "—");
   const channels = (match?.channels?.[country] as string[] | undefined) || [];
@@ -449,4 +454,5 @@ const styles = StyleSheet.create({
   sectionTitle: { color: "#9aa3b2", fontWeight: "700" },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeTxt: { fontWeight: "800", fontSize: 12 },
+  retryBtn: { alignSelf: "center", marginTop: 8, backgroundColor: "#1f1b3a", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
 });
