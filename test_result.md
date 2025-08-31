@@ -446,3 +446,10 @@ agent_communication:
     message: "✅ Backend testing completed successfully! All high-priority endpoints are working correctly. Fixed critical Pydantic v2 ObjectId compatibility issue and duplicate sourceId constraint. All 9 test cases passed including: root health check, TheSportsDB import, match CRUD operations, ratings, and voting system. Backend is ready for production use."
   - agent: "testing"
     message: "✅ Competitions + Lineups/Injuries backend testing completed! 10/11 core tests passed. Successfully tested: (1) GET /api/ health check, (2) GET /api/competitions with 2 seeded competitions, (3) GET /api/competitions/{id} with proper fields, (4) GET /api/competitions/{id}/matches with timezone support, (5) GET /api/matches/{id}?include=lineups with complete lineups object, (6) GET /api/matches/{id}/lineups endpoint, (7) POST /api/matches/{id}/lineups admin override, (8) POST /api/matches/{id}/injuries admin override. Minor issue: GET /api/matches/grouped?tz=Europe/Madrid has ObjectId serialization error (500 status) but core functionality works. Fixed ObjectId serialization in competition matches endpoints."
+  - agent: "main"
+    message: "Please run backend smoke tests only now: GET /api/, GET /api/version, GET /api/competitions, GET /api/competitions/{first_id}, GET /api/competitions/{first_id}/matches?tz=Europe/Zurich, GET /api/matches, GET /api/matches/grouped?country=CH."
+metadata:
+  created_by: "main_agent"
+  version: "1.2"
+  test_sequence: 3
+  run_ui: false
