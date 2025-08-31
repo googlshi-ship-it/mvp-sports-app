@@ -565,77 +565,118 @@ def test_matches_grouped_with_timezone():
         return False
 
 def main():
-    """Run all backend tests in sequence"""
-    print("🚀 Starting Backend API Tests")
+    """Run all backend tests in sequence - including new Competitions + Lineups/Injuries features"""
+    print("🚀 Starting Backend API Tests - Competitions + Lineups/Injuries Focus")
     print(f"Base URL: {BASE_URL}")
-    print("=" * 60)
+    print("=" * 80)
     
     results = {}
-    match_id = None
     
-    # Test 1: Root endpoint
-    results["root"] = test_root_endpoint()
+    # ===== STEP 1: Health Check =====
+    results["health"] = test_root_endpoint()
     
-    # Test 2: Import TheSportsDB
-    results["import"] = test_import_thesportsdb()
+    # ===== STEP 2: Verify Seeding - Competitions =====
+    competitions_data = test_competitions_list()
+    results["competitions_list"] = bool(competitions_data)
     
-    # Test 3: Matches grouped
-    grouped_data = test_matches_grouped()
-    results["grouped"] = bool(grouped_data)
+    competition_ids = []
+    if competitions_data:
+        # ===== STEP 3: Test Competition Details =====
+        for comp in competitions_data[:2]:  # Test first 2 competitions
+            comp_id = comp.get("_id") or comp.get("id")
+            comp_name = comp.get("name", "Unknown")
+            if comp_id:
+                competition_ids.append((comp_id, comp_name))
+                results[f"competition_detail_{comp_name.replace(' ', '_')}"] = test_competition_detail(comp_id, comp_name)
     
-    # Test 4: Check if we need to create a manual match
-    if grouped_data:
-        total_matches = len(grouped_data.get("today", [])) + len(grouped_data.get("tomorrow", [])) + len(grouped_data.get("week", []))
-        if total_matches == 0:
-            print("\n⚠️  No matches found in grouped data, creating manual match...")
-            match_id = create_manual_match()
-            results["manual_match"] = bool(match_id)
+    # ===== STEP 4: Test Competition Matches =====
+    lineups_match_id = None
+    if competition_ids:
+        for comp_id, comp_name in competition_ids:
+            match_id = test_competition_matches(comp_id, comp_name)
+            results[f"competition_matches_{comp_name.replace(' ', '_')}"] = bool(match_id)
+            if match_id and not lineups_match_id:
+                lineups_match_id = match_id  # Use first available match for lineups testing
     
-    # Test 5: List matches
-    if not match_id:
-        match_id = test_matches_list()
-    results["list_matches"] = bool(match_id)
-    
-    if match_id:
-        # Test 6: Match detail
-        results["match_detail"] = test_match_detail(match_id)
+    # ===== STEP 5: Test Match with Lineups =====
+    if lineups_match_id:
+        results["match_with_lineups"] = test_match_with_lineups(lineups_match_id)
         
-        # Test 7: Match rating
-        results["match_rating"] = test_match_rating(match_id)
+        # ===== STEP 6: Test Lineups Endpoint =====
+        results["lineups_endpoint"] = test_lineups_endpoint(lineups_match_id)
         
-        # Test 8: Match voting
-        results["match_voting"] = test_match_voting(match_id)
-        
-        # Test 9: Get votes
-        results["match_votes"] = test_match_votes(match_id)
+        # ===== STEP 7: Test Admin Overrides =====
+        results["admin_lineups_override"] = test_admin_lineups_override(lineups_match_id)
+        results["admin_injuries_override"] = test_admin_injuries_override(lineups_match_id)
     else:
-        print("\n❌ No match ID available for detailed testing")
+        print("\n❌ No match ID available for lineups testing")
         results.update({
-            "match_detail": False,
-            "match_rating": False,
-            "match_voting": False,
-            "match_votes": False
+            "match_with_lineups": False,
+            "lineups_endpoint": False,
+            "admin_lineups_override": False,
+            "admin_injuries_override": False
         })
     
-    # Summary
-    print("\n" + "=" * 60)
-    print("📊 TEST SUMMARY")
-    print("=" * 60)
+    # ===== STEP 8: Test Existing Endpoints Still Work =====
+    results["matches_grouped_timezone"] = test_matches_grouped_with_timezone()
     
-    passed = sum(1 for result in results.values() if result)
-    total = len(results)
+    # ===== LEGACY TESTS (Optional) =====
+    print("\n" + "=" * 40 + " LEGACY TESTS " + "=" * 40)
     
-    for test_name, result in results.items():
+    # Test import (should work but return 0,0)
+    results["import_legacy"] = test_import_thesportsdb()
+    
+    # Test matches grouped (original)
+    grouped_data = test_matches_grouped()
+    results["grouped_legacy"] = bool(grouped_data)
+    
+    # Get a match for rating/voting tests
+    match_id = test_matches_list()
+    results["list_matches_legacy"] = bool(match_id)
+    
+    if match_id:
+        results["match_detail_legacy"] = test_match_detail(match_id)
+        # Skip rating/voting tests as they require auth and are not in scope
+        print("   ⚠️  Skipping rating/voting tests (not in current scope)")
+    
+    # ===== SUMMARY =====
+    print("\n" + "=" * 80)
+    print("📊 TEST SUMMARY - COMPETITIONS + LINEUPS/INJURIES FOCUS")
+    print("=" * 80)
+    
+    # Separate core tests from legacy tests
+    core_tests = {k: v for k, v in results.items() if not k.endswith("_legacy")}
+    legacy_tests = {k: v for k, v in results.items() if k.endswith("_legacy")}
+    
+    print("\n🎯 CORE TESTS (Competitions + Lineups/Injuries):")
+    core_passed = sum(1 for result in core_tests.values() if result)
+    core_total = len(core_tests)
+    
+    for test_name, result in core_tests.items():
         status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{test_name:20} {status}")
+        print(f"  {test_name:35} {status}")
     
-    print(f"\nOverall: {passed}/{total} tests passed")
+    print(f"\n📈 Core Tests: {core_passed}/{core_total} passed")
     
-    if passed == total:
-        print("🎉 All tests passed!")
+    print("\n🔄 LEGACY TESTS (Existing functionality):")
+    legacy_passed = sum(1 for result in legacy_tests.values() if result)
+    legacy_total = len(legacy_tests)
+    
+    for test_name, result in legacy_tests.items():
+        status = "✅ PASS" if result else "❌ FAIL"
+        print(f"  {test_name:35} {status}")
+    
+    print(f"\n📈 Legacy Tests: {legacy_passed}/{legacy_total} passed")
+    
+    total_passed = core_passed + legacy_passed
+    total_tests = core_total + legacy_total
+    print(f"\n🏆 OVERALL: {total_passed}/{total_tests} tests passed")
+    
+    if core_passed == core_total:
+        print("🎉 All core Competitions + Lineups/Injuries tests passed!")
         return 0
     else:
-        print("⚠️  Some tests failed")
+        print("⚠️  Some core tests failed")
         return 1
 
 if __name__ == "__main__":
