@@ -602,6 +602,9 @@ async def matches_grouped(country: Optional[str] = None, tz: Optional[str] = Non
             bucket = "week"
         extra = with_voting_status(m)
         st_local = to_local_iso(st, tz) if tz else None
+        # Convert ObjectId fields to strings
+        if "competition_id" in m and m["competition_id"]:
+            m["competition_id"] = str(m["competition_id"])
         grouped[bucket].append({**m, "id": str(m["_id"]), "channelsForCountry": pick_channels(m), **extra, "start_time_local": st_local})
     return grouped
 
