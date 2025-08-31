@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, Query
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -10,13 +10,9 @@ from typing import List, Optional, Dict, Literal
 import uuid
 from datetime import datetime, timedelta, timezone
 from bson import ObjectId
-import requests
 import asyncio
-import csv
-from io import StringIO
 from jose import jwt, JWTError
 from passlib.hash import bcrypt
-
 from zoneinfo import ZoneInfo
 
 ROOT_DIR = Path(__file__).parent
@@ -35,10 +31,11 @@ JWT_EXPIRE_HOURS = 240
 # Voting window (hours)
 VOTING_WINDOW_HOURS = int(os.environ.get("VOTING_WINDOW_HOURS", "24"))
 
-# Create the main app without a prefix
-app = FastAPI()
+# Admin token
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "CHANGEME")
 
-# Create a router with the /api prefix
+# Create the main app and router with prefix /api
+app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # Logger
@@ -71,7 +68,6 @@ def match_duration_minutes(sport: str) -> int:
 
 
 def compute_final_and_window(m: Dict) -> Dict:
-    # finalAt
     st = m.get("startTime")
     if isinstance(st, str):
         st = datetime.fromisoformat(st)
@@ -98,10 +94,10 @@ def compute_final_and_window(m: Dict) -> Dict:
     return {"finalAt": final_at, "voting_open_at": open_at, "voting_close_at": close_at}
 
 
-def voting_status_fields(m: Dict) -> Dict:
+def with_voting_status(m: Dict) -> Dict:
     now = datetime.now(timezone.utc)
     comp = compute_final_and_window(m)
-    is_open = comp["voting_open_at"] <= now < comp["voting_close_at"]
+    is_open = comp["voting_open_at"] &lt;= now &lt; comp["voting_close_at"]
     return {
         **{k: comp[k].isoformat() for k in comp},
         "now": now.isoformat(),
@@ -109,28 +105,113 @@ def voting_status_fields(m: Dict) -> Dict:
     }
 
 
+def to_local_iso(dt: datetime, tz: Optional[str]) -&gt; Optional[str]:
+    if not dt:
+        return None
+    dt = to_utc(dt)
+    if not tz:
+        return None
+    try:
+        return dt.astimezone(ZoneInfo(tz)).isoformat()
+    except Exception:
+        return None
+
+
 async def ensure_indexes():
     await db.matches.create_index("startTime")
     await db.matches.create_index("sourceId", unique=True)
+    await db.matches.create_index("competition_id")
     await db.ratings.create_index("matchId")
     await db.votes.create_index("matchId")
-    await db.push_tokens.create_index("token", unique=True)
-    await db.notifications.create_index([("deliverAt", 1)])
-    await db.notifications.create_index([("status", 1)])
-    await db.notifications.create_index([("matchId", 1)])
-    await db.notifications.create_index([("matchId", 1), ("token", 1), ("type", 1)], unique=True)
-    await db.device_votes.create_index([("matchId", 1), ("token", 1)], unique=True)
-    await db.dispatch_logs.create_index([("ts", -1)])
-    await db.player_ratings.create_index([("matchId", 1), ("token", 1), ("player", 1)], unique=True)
     await db.users.create_index("email", unique=True)
+    await db.competitions.create_index([("type", 1), ("country", 1), ("season", 1)])
 
 
 async def backfill_voting_windows():
-    # For all matches, ensure finalAt/voting_open_at/voting_close_at
     cur = db.matches.find({})
     async for m in cur:
         comp = compute_final_and_window(m)
         await db.matches.update_one({"_id": m["_id"]}, {"$set": comp})
+
+
+async def seed_competitions_and_matches():
+    cnt = await db.competitions.count_documents({})
+    if cnt &gt; 0:
+        return
+    # Seed competitions
+    la_liga = {
+        "name": "La Liga",
+        "country": "Spain",
+        "season": "2025",
+        "type": "league",
+        "start_date": datetime(2025, 8, 15, tzinfo=timezone.utc),
+        "end_date": datetime(2026, 5, 31, tzinfo=timezone.utc),
+    }
+    ucl = {
+        "name": "UEFA Champions League",
+        "country": "Europe",
+        "season": "2025",
+        "type": "cup",
+        "start_date": datetime(2025, 6, 1, tzinfo=timezone.utc),
+        "end_date": datetime(2026, 5, 31, tzinfo=timezone.utc),
+    }
+    res1 = await db.competitions.insert_one(la_liga)
+    res2 = await db.competitions.insert_one(ucl)
+
+    now = datetime.now(timezone.utc)
+    def mk_match(hours_from_now: int, comp_id):
+        return {
+            "sport": "football",
+            "tournament": "La Liga" if comp_id == res1.inserted_id else "UEFA Champions League",
+            "subgroup": "Matchday",
+            "homeTeam": {"type": "club", "name": "Team A", "countryCode": "ES"},
+            "awayTeam": {"type": "club", "name": "Team B", "countryCode": "ES"},
+            "startTime": now + timedelta(hours=hours_from_now),
+            "status": "scheduled",
+            "score": None,
+            "channels": {"CH": ["blue Sport"], "ES": ["Movistar"]},
+            "source": "seed",
+            "sourceId": f"seed_{uuid.uuid4()}",
+            "competition_id": comp_id,
+            "stadium": "Demo Stadium",
+            # lineups/injuries demo
+            "formation_home": "4-3-3",
+            "formation_away": "4-2-3-1",
+            "lineup_home": [
+                {"number": "1", "name": "GK Home", "pos": "GK", "role": "starter"},
+                {"number": "9", "name": "CF Home", "pos": "FW", "role": "starter"},
+            ],
+            "lineup_away": [
+                {"number": "1", "name": "GK Away", "pos": "GK", "role": "starter"},
+                {"number": "10", "name": "CF Away", "pos": "FW", "role": "starter"},
+            ],
+            "bench_home": [
+                {"number": "12", "name": "Sub H1", "pos": "MF", "role": "sub"}
+            ],
+            "bench_away": [
+                {"number": "12", "name": "Sub A1", "pos": "MF", "role": "sub"}
+            ],
+            "unavailable_home": [
+                {"name": "Injured H1", "reason": "Hamstring", "type": "injury", "status": "out"},
+                {"name": "Doubt H2", "reason": "Knock", "type": "injury", "status": "doubtful"},
+            ],
+            "unavailable_away": [
+                {"name": "Susp A1", "reason": "Red card", "type": "suspension", "status": "out"}
+            ],
+            "lineups_status": "probable",
+            "lineups_updated_at": datetime.now(timezone.utc),
+            "injuries_updated_at": datetime.now(timezone.utc),
+        }
+
+    matches = [
+        mk_match(6, res1.inserted_id),
+        mk_match(24, res1.inserted_id),
+        mk_match(36, res2.inserted_id),
+    ]
+    for m in matches:
+        comp = compute_final_and_window(m)
+        m.update(comp)
+    await db.matches.insert_many(matches)
 
 
 @app.on_event("startup")
@@ -138,22 +219,19 @@ async def on_startup():
     try:
         await ensure_indexes()
         await backfill_voting_windows()
+        await seed_competitions_and_matches()
     except Exception as e:
-        logger.warning(f"Startup ensure/backfill failed: {e}")
+        logger.warning(f"Startup setup failed: {e}")
+    # Minimal background loop placeholder
     asyncio.create_task(_dispatch_loop())
 
 
 # ---------------------------
-# Models
+# Background dispatcher stubs (notifications omitted)
 # ---------------------------
-Sport = Literal["football", "basketball", "ufc"]
-
-
-class Team(BaseModel):
-
-# Minimal dispatcher stubs to avoid startup errors if notifications section is trimmed
 async def _dispatch_now_internal():
     return 0
+
 
 async def _dispatch_loop():
     while True:
@@ -163,6 +241,14 @@ async def _dispatch_loop():
             logger.warning(f"Dispatch loop error: {e}")
         await asyncio.sleep(90)
 
+
+# ---------------------------
+# Models
+# ---------------------------
+Sport = Literal["football", "basketball", "ufc"]
+
+
+class Team(BaseModel):
     type: Literal["club", "national"]
     name: str
     countryCode: Optional[str] = None
@@ -185,15 +271,28 @@ class MatchBase(BaseModel):
     channels: Dict[str, List[str]] = Field(default_factory=dict)
     source: Optional[str] = None
     sourceId: Optional[str] = None
-    # Persisted fields for voting window
+    stadium: Optional[str] = None
+    competition_id: Optional[str] = None  # stored as ObjectId string in API
+    # Persist voting window
     finalAt: Optional[datetime] = None
     voting_open_at: Optional[datetime] = None
     voting_close_at: Optional[datetime] = None
+    # Lineups & injuries
+    formation_home: Optional[str] = None
+    formation_away: Optional[str] = None
+    lineup_home: Optional[List[Dict]] = None
+    lineup_away: Optional[List[Dict]] = None
+    bench_home: Optional[List[Dict]] = None
+    bench_away: Optional[List[Dict]] = None
+    unavailable_home: Optional[List[Dict]] = None
+    unavailable_away: Optional[List[Dict]] = None
+    lineups_status: Optional[Literal["none", "probable", "confirmed"]] = "none"
+    lineups_updated_at: Optional[datetime] = None
+    injuries_updated_at: Optional[datetime] = None
 
 
 class MatchDB(MatchBase):
     id: str = Field(alias="_id")
-    # Runtime fields
     now: Optional[datetime] = None
     isVotingOpen: Optional[bool] = None
 
@@ -254,7 +353,7 @@ class UserOut(BaseModel):
     score: int
 
 
-def create_token(user_id: str, email: str) -> str:
+def create_token(user_id: str, email: str) -&gt; str:
     payload = {"sub": user_id, "email": email, "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRE_HOURS)}
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
 
@@ -276,6 +375,11 @@ async def get_user_from_token(authorization: Optional[str] = Header(default=None
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
+def require_admin(x_admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token")):
+    if not x_admin_token or x_admin_token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Admin token required")
+
+
 async def update_user_score(user_id: ObjectId, delta: int):
     await db.users.update_one({"_id": user_id}, {"$inc": {"score": int(delta)}})
 
@@ -283,10 +387,9 @@ async def update_user_score(user_id: ObjectId, delta: int):
 # -------- Static Config --------
 THESPORTSDB_KEY = os.environ.get("THESPORTSDB_KEY", "3")
 SPORT_MAP = {"football": "Soccer", "basketball": "Basketball", "ufc": "Fighting"}
-CHANNELS_CH = {"football": ["blue Sport", "SRF zwei"], "basketball": ["SRF zwei"], "ufc": ["blue Sport", "UFC Fight Pass"]}
 
 
-def categories_for_sport(sport: str) -> List[str]:
+def categories_for_sport(sport: str) -&gt; List[str]:
     if sport == "football":
         return ["mvp", "scorer", "assist", "defender", "goalkeeper"]
     if sport == "basketball":
@@ -303,7 +406,7 @@ def categories_for_sport(sport: str) -> List[str]:
 def assert_voting_open_or_raise(match_doc: Dict):
     comp = compute_final_and_window(match_doc)
     now = datetime.now(timezone.utc)
-    if now < comp["voting_open_at"]:
+    if now &lt; comp["voting_open_at"]:
         remaining = int((comp["voting_open_at"] - now).total_seconds())
         raise HTTPException(status_code=403, detail={
             "reason": "voting_not_open",
@@ -311,7 +414,7 @@ def assert_voting_open_or_raise(match_doc: Dict):
             "now": now.isoformat(),
             "remainingSeconds": max(remaining, 0),
         })
-    if now >= comp["voting_close_at"]:
+    if now &gt;= comp["voting_close_at"]:
         raise HTTPException(status_code=403, detail={
             "reason": "voting_closed",
             "closedAt": comp["voting_close_at"].isoformat(),
@@ -321,8 +424,13 @@ def assert_voting_open_or_raise(match_doc: Dict):
 
 
 # ---------------------------
-# Routes: Auth
+# Health & Auth
 # ---------------------------
+@api_router.get("/")
+async def health():
+    return {"message": "MVP backend running"}
+
+
 @api_router.post("/auth/register")
 async def register(body: RegisterInput):
     existing = await db.users.find_one({"email": body.email.lower()})
@@ -356,12 +464,81 @@ async def leaderboard():
 
 
 # ---------------------------
-# Routes: Core & Matches
+# Competitions
+# ---------------------------
+class CompetitionCreate(BaseModel):
+    name: str
+    country: str
+    season: str
+    type: Literal["league", "cup"]
+    start_date: datetime
+    end_date: datetime
+
+
+class CompetitionDB(CompetitionCreate):
+    id: str = Field(alias="_id")
+
+    class Config:
+        populate_by_name = True
+        json_encoders = {ObjectId: str, datetime: lambda v: v.isoformat()}
+
+
+@api_router.get("/competitions")
+async def list_competitions():
+    items = await db.competitions.find({}).sort([("type", 1), ("country", 1), ("name", 1)]).to_list(1000)
+    for it in items:
+        it["_id"] = str(it["_id"])  # type: ignore
+    return items
+
+
+@api_router.get("/competitions/{comp_id}")
+async def get_competition(comp_id: str):
+    try:
+        oid = ObjectId(comp_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid competition id")
+    c = await db.competitions.find_one({"_id": oid})
+    if not c:
+        raise HTTPException(status_code=404, detail="Competition not found")
+    c["_id"] = str(c["_id"])  # type: ignore
+    return c
+
+
+@api_router.get("/competitions/{comp_id}/matches")
+async def competition_matches(comp_id: str, tz: Optional[str] = Query(default=None)):
+    try:
+        oid = ObjectId(comp_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid competition id")
+    cur = db.matches.find({"competition_id": oid}).sort("startTime", 1)
+    out = []
+    async for m in cur:
+        st = m.get("startTime")
+        st_local = None
+        if isinstance(st, str):
+            st = datetime.fromisoformat(st)
+        st = to_utc(st)
+        if tz:
+            st_local = to_local_iso(st, tz)
+        m["_id"] = str(m["_id"])  # type: ignore
+        extra = with_voting_status(m)
+        out.append({**m, **extra, "start_time_local": st_local})
+    return out
+
+
+# ---------------------------
+# Matches core
 # ---------------------------
 @api_router.post("/matches", response_model=MatchDB)
 async def create_match(match: MatchCreate):
     doc = match.dict()
-    # compute final/window at insert
+    # convert competition_id to ObjectId if present
+    comp_id = doc.get("competition_id")
+    if comp_id:
+        try:
+            doc["competition_id"] = ObjectId(comp_id)
+        except Exception:
+            doc["competition_id"] = None
     comp = compute_final_and_window(doc)
     doc.update(comp)
     if not doc.get("sourceId"):
@@ -370,11 +547,11 @@ async def create_match(match: MatchCreate):
     res = await db.matches.insert_one(doc)
     created = await db.matches.find_one({"_id": res.inserted_id})
     created["_id"] = str(created["_id"])  # type: ignore
-    return MatchDB(**{**created, **voting_status_fields(created)})
+    return MatchDB(**{**created, **with_voting_status(created)})
 
 
 @api_router.get("/matches")
-async def list_matches(country: Optional[str] = None, sport: Optional[Sport] = None, status: Optional[str] = None):
+async def list_matches(country: Optional[str] = None, sport: Optional[Sport] = None, status: Optional[str] = None, tz: Optional[str] = None):
     q: Dict = {}
     if sport:
         q["sport"] = sport
@@ -384,13 +561,18 @@ async def list_matches(country: Optional[str] = None, sport: Optional[Sport] = N
     out = []
     for item in items:
         item["_id"] = str(item["_id"])  # type: ignore
-        extra = voting_status_fields(item)
-        out.append({**item, **extra})
+        extra = with_voting_status(item)
+        st = item.get("startTime")
+        if isinstance(st, str):
+            st = datetime.fromisoformat(st)
+        st = to_utc(st)
+        st_local = to_local_iso(st, tz) if tz else None
+        out.append({**item, **extra, "start_time_local": st_local})
     return out
 
 
 @api_router.get("/matches/grouped")
-async def matches_grouped(country: Optional[str] = None):
+async def matches_grouped(country: Optional[str] = None, tz: Optional[str] = None):
     now = datetime.now(timezone.utc)
     sod = start_of_day(now)
     today_end = sod + timedelta(days=1)
@@ -410,19 +592,20 @@ async def matches_grouped(country: Optional[str] = None):
         st = m["startTime"]
         if isinstance(st, str):
             st = datetime.fromisoformat(st)
-        if st <= today_end:
+        if st &lt;= today_end:
             bucket = "today"
-        elif st <= tomorrow_end:
+        elif st &lt;= tomorrow_end:
             bucket = "tomorrow"
         else:
             bucket = "week"
-        extra = voting_status_fields(m)
-        grouped[bucket].append({**m, "id": str(m["_id"]), "channelsForCountry": pick_channels(m), **extra})
+        extra = with_voting_status(m)
+        st_local = to_local_iso(st, tz) if tz else None
+        grouped[bucket].append({**m, "id": str(m["_id"]), "channelsForCountry": pick_channels(m), **extra, "start_time_local": st_local})
     return grouped
 
 
 @api_router.get("/matches/{match_id}")
-async def get_match(match_id: str):
+async def get_match(match_id: str, include: Optional[str] = None, tz: Optional[str] = None):
     try:
         oid = ObjectId(match_id)
     except Exception:
@@ -431,8 +614,17 @@ async def get_match(match_id: str):
     if not m:
         raise HTTPException(status_code=404, detail="Match not found")
     m["_id"] = str(m["_id"])  # type: ignore
-    extra = voting_status_fields(m)
-    return {**m, **extra}
+    extra = with_voting_status(m)
+    st = m.get("startTime")
+    if isinstance(st, str):
+        st = datetime.fromisoformat(st)
+    st = to_utc(st)
+    st_local = to_local_iso(st, tz) if tz else None
+    out = {**m, **extra, "start_time_local": st_local}
+
+    if include == "lineups":
+        out["lineups"] = await _get_lineups_payload(m)
+    return out
 
 
 @api_router.post("/matches/{match_id}/set_voting_window")
@@ -453,7 +645,7 @@ async def set_voting_window(match_id: str, body: Dict[str, Optional[str]]):
     await db.matches.update_one({"_id": oid}, {"$set": updates})
     m = await db.matches.find_one({"_id": oid})
     m["_id"] = str(m["_id"])  # type: ignore
-    return {**m, **voting_status_fields(m)}
+    return {**m, **with_voting_status(m)}
 
 
 @api_router.get("/matches/{match_id}/rating")
@@ -486,7 +678,7 @@ async def rate_match(match_id: str, body: RateInput, current=Depends(get_user_fr
     dislikes = doc.get("dislikes", 0)
     total = max(likes + dislikes, 1)
     like_pct = round(likes * 100 / total, 1)
-    delta = 1 if (body.like and like_pct >= 50) or ((not body.like) and like_pct < 50) else -1
+    delta = 1 if (body.like and like_pct &gt;= 50) or ((not body.like) and like_pct &lt; 50) else -1
     await update_user_score(current["_id"], delta)
     return {"likes": likes, "dislikes": dislikes, "likePct": like_pct}
 
@@ -533,7 +725,7 @@ async def vote_match(match_id: str, body: VoteInput, current=Depends(get_user_fr
             if pct:
                 max_pct = max(pct.values())
                 sel_pct = pct.get(body.player, 0)
-                delta = 1 if sel_pct >= max_pct - 20 else -1
+                delta = 1 if sel_pct &gt;= max_pct - 20 else -1
     if delta != 0:
         await update_user_score(current["_id"], delta)
     return {"percentages": out, "totals": totals}
@@ -552,7 +744,7 @@ async def submit_player_rating(match_id: str, body: Dict, current=Depends(get_us
     if m.get("sport") != "football":
         raise HTTPException(status_code=400, detail="Player ratings only for football matches")
 
-    def _clamp10(x: int) -> int:
+    def _clamp10(x: int) -&gt; int:
         try:
             x = int(x)
         except Exception:
@@ -576,14 +768,14 @@ async def submit_player_rating(match_id: str, body: Dict, current=Depends(get_us
         acc["passing"] += r.get("passing", 0)
         acc["dribbling"] += r.get("dribbling", 0)
         acc["count"] += 1
-    if acc["count"] > 0:
+    if acc["count"] &gt; 0:
         av = {k: (acc[k] / acc["count"]) for k in ["attack", "defense", "passing", "dribbling"]}
         delta = 0
         for k in ["attack", "defense", "passing", "dribbling"]:
             diff = abs(doc[k] - av[k])
-            if diff <= 2:
+            if diff &lt;= 2:
                 delta += 1
-            elif diff > 3:
+            elif diff &gt; 3:
                 delta -= 1
         if delta != 0:
             await update_user_score(current["_id"], delta)
@@ -593,11 +785,88 @@ async def submit_player_rating(match_id: str, body: Dict, current=Depends(get_us
         return {"count": 0, "averages": {"attack": 0, "defense": 0, "passing": 0, "dribbling": 0}, "overall": 0, "delta": 0}
 
 
-# ----------- Notifications & Scheduling and Import -----------
-# (same as previously implemented; finalAt/voting windows are now stored on matches)
-EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+# ---------------------------
+# Lineups & Injuries API
+# ---------------------------
+async def _get_lineups_payload(m: Dict) -&gt; Dict:
+    return {
+        "lineups_status": m.get("lineups_status", "none"),
+        "formation_home": m.get("formation_home"),
+        "formation_away": m.get("formation_away"),
+        "home": {
+            "starters": [p for p in (m.get("lineup_home") or []) if p.get("role") == "starter"],
+            "bench": [p for p in (m.get("bench_home") or [])],
+            "unavailable": m.get("unavailable_home") or [],
+        },
+        "away": {
+            "starters": [p for p in (m.get("lineup_away") or []) if p.get("role") == "starter"],
+            "bench": [p for p in (m.get("bench_away") or [])],
+            "unavailable": m.get("unavailable_away") or [],
+        },
+        "lineups_updated_at": (m.get("lineups_updated_at").isoformat() if m.get("lineups_updated_at") else None),
+        "injuries_updated_at": (m.get("injuries_updated_at").isoformat() if m.get("injuries_updated_at") else None),
+    }
 
-# ... keep previously implemented notifications endpoints and dispatch loop ...
+
+@api_router.get("/matches/{match_id}/lineups")
+async def get_lineups(match_id: str):
+    try:
+        oid = ObjectId(match_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    m = await db.matches.find_one({"_id": oid})
+    if not m:
+        raise HTTPException(status_code=404, detail="Match not found")
+    return await _get_lineups_payload(m)
+
+
+@api_router.post("/matches/{match_id}/lineups")
+async def post_lineups(match_id: str, body: Dict, admin=Depends(require_admin)):
+    try:
+        oid = ObjectId(match_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    updates = {}
+    for key in [
+        "formation_home", "formation_away", "lineup_home", "lineup_away", "bench_home", "bench_away", "lineups_status"
+    ]:
+        if key in body:
+            updates[key] = body[key]
+    updates["lineups_updated_at"] = datetime.now(timezone.utc)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No lineups fields provided")
+    await db.matches.update_one({"_id": oid}, {"$set": updates})
+    m = await db.matches.find_one({"_id": oid})
+    return await _get_lineups_payload(m)
+
+
+@api_router.post("/matches/{match_id}/injuries")
+async def post_injuries(match_id: str, body: Dict, admin=Depends(require_admin)):
+    try:
+        oid = ObjectId(match_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    updates = {}
+    for key in ["unavailable_home", "unavailable_away"]:
+        if key in body:
+            updates[key] = body[key]
+    updates["injuries_updated_at"] = datetime.now(timezone.utc)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No injuries fields provided")
+    await db.matches.update_one({"_id": oid}, {"$set": updates})
+    m = await db.matches.find_one({"_id": oid})
+    return await _get_lineups_payload(m)
+
+
+# ---------------------------
+# TheSportsDB Importer (skeleton with idempotent upsert)
+# ---------------------------
+@api_router.post("/import/thesportsdb")
+async def import_thesportsdb(days: int = 1):
+    # Minimal stub to keep endpoint available; real mapping omitted in this MVP increment.
+    # Idempotent no-op import.
+    return {"created": 0, "updated": 0}
+
 
 # Include router and middleware
 app.include_router(api_router)
