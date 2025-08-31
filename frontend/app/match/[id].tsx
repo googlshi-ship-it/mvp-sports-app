@@ -200,9 +200,6 @@ export default function MatchDetails() {
     );
   };
 
-  import { Share, Platform } from "react-native";
-import * as Clipboard from "expo-clipboard";
-
   const onShare = async () => {
     try {
       const home = match?.homeTeam?.name || "Home";
