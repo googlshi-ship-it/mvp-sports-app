@@ -17,6 +17,8 @@ from io import StringIO
 from jose import jwt, JWTError
 from passlib.hash import bcrypt
 
+from zoneinfo import ZoneInfo
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
