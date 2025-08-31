@@ -62,11 +62,20 @@ export default function MatchesScreen() {
 
   const renderItem = ({ item }: { item: Match }) => {
     const time = new Date(item.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    const Card: any = reduceEffects ? View : BlurView;
-    const cardProps: any = reduceEffects ? {} : { intensity: 50, tint: "dark" };
     return (
-      <TouchableOpacity activeOpacity={0.8} onPress={() => router.push(`/match/${item.id}`)}>
-        <Card {...cardProps} style={styles.card}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => router.push(`/match/${item.id}`)}
+        onLongPress={() => {
+          if (typeof window !== "undefined" && (window as any).ActionSheetIOS) {
+            // Web/iOS fallback: simple alert for MVP
+            alert("Share / Add to Calendar / Copy Link coming soon");
+          } else {
+            alert("Share / Add to Calendar / Copy Link coming soon");
+          }
+        }}
+      >
+        <GlassCard fixedHeight={172}>
           <View style={styles.rowBetween}>
             <Text style={styles.time}>{time}</Text>
             <View style={styles.tournamentRow}>
@@ -83,7 +92,7 @@ export default function MatchesScreen() {
           <Text style={styles.channels} numberOfLines={1}>
             Channels ({DEFAULT_COUNTRY}): {item.channelsForCountry?.join(", ") || "TBD"}
           </Text>
-        </Card>
+        </GlassCard>
       </TouchableOpacity>
     );
   };
