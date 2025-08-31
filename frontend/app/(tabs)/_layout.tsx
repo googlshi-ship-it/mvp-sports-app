@@ -23,33 +23,11 @@ export default function TabsLayout() {
         },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Matches",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="trophy-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="teams"
-        options={{
-          title: "My Teams",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="star-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: "Matches", tabBarIcon: ({ color, size }) => (<Ionicons name="trophy-outline" size={size} color={color} />) }} />
+      <Tabs.Screen name="leaderboard" options={{ title: "Leaderboard", tabBarIcon: ({ color, size }) => (<Ionicons name="medal-outline" size={size} color={color} />) }} />
+      <Tabs.Screen name="teams" options={{ title: "My Teams", tabBarIcon: ({ color, size }) => (<Ionicons name="star-outline" size={size} color={color} />) }} />
+      <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: ({ color, size }) => (<Ionicons name="person-circle-outline" size={size} color={color} />) }} />
+      <Tabs.Screen name="settings" options={{ title: "Settings", tabBarIcon: ({ color, size }) => (<Ionicons name="settings-outline" size={size} color={color} />) }} />
     </Tabs>
   );
 }
