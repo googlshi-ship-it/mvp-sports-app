@@ -10,6 +10,8 @@ from typing import List, Optional, Dict, Literal
 import uuid
 from datetime import datetime, timedelta, timezone
 from bson import ObjectId
+import requests
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
