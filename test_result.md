@@ -293,8 +293,8 @@ frontend:
         comment: "Displays tournament, teams, channels, allows like/dislike and shows voting results."
 metadata:
   created_by: "main_agent"
-  version: "1.0"
-  test_sequence: 1
+  version: "1.1"
+  test_sequence: 2
   run_ui: false
 
 test_plan:
