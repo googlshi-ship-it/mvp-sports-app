@@ -245,6 +245,7 @@ export default function MatchDetails() {
         </View>
 
         <Card {...cardProps} style={styles.card}>
+          {RIVALRY_UI && match?.rivalry?.enabled ? (<View pointerEvents="none" style={styles.topGlow} />) : null}
           <Text style={styles.time}>{kickoff}</Text>
           <View style={styles.teamsRow}>
             <Text style={styles.team}>{match?.homeTeam?.name || "—"}</Text>
