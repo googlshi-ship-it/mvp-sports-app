@@ -41,3 +41,13 @@ export async function registerForPushNotificationsAsync(country: string = "CH", 
   });
   return token;
 }
+
+export async function sendLocalTestNotification() {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "MVP (Local)",
+      body: "This is a local test notification",
+    },
+    trigger: null,
+  });
+}

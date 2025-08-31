@@ -1,10 +1,11 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ToastAndroid, Alert } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { apiGet, apiPost } from "../../src/api/client";
 import { getRegisteredPushToken } from "../../src/notifications";
+import { useUIStore } from "../../src/store/ui";
 
 function sportIcon(sport?: string) {
   if (sport === "football") return <Ionicons name="football-outline" size={18} color="#8a7cff" />;
@@ -40,7 +41,8 @@ export default function MatchDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [match, setMatch] = useState<any | null>(null);
-  const [votes, setVotes] = useState<any | null>(null);
+  const [votesData, setVotesData] = useState<any | null>(null);
+  const [rating, setRating] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -48,6 +50,9 @@ export default function MatchDetails() {
   const [countryOpen, setCountryOpen] = useState(false);
   const [country, setCountry] = useState<CountryCode>("CH");
   const [scheduled, setScheduled] = useState(false);
+  const reduceEffects = useUIStore((s) => s.reduceEffects);
+
+  const toast = (m: string) => { if (Platform.OS === "android") ToastAndroid.show(m, ToastAndroid.SHORT); else Alert.alert(m); };
 
   const cats = useMemo(() => {
     if (!match?.sport) return [];
@@ -60,7 +65,9 @@ export default function MatchDetails() {
         const m = await apiGet(`/api/matches/${id}`);
         setMatch(m);
         const v = await apiGet(`/api/matches/${id}/votes`);
-        setVotes(v);
+        setVotesData(v);
+        const r = await apiGet(`/api/matches/${id}/rating`);
+        setRating(r);
       } catch (e) {
         console.warn(e);
       } finally {
@@ -76,7 +83,8 @@ export default function MatchDetails() {
 
   const rate = async (like: boolean) => {
     try {
-      await apiPost(`/api/matches/${id}/rate`, { like });
+      const res = await apiPost(`/api/matches/${id}/rate`, { like });
+      setRating(res);
     } catch (e) {
       console.warn(e);
     }
@@ -87,9 +95,8 @@ export default function MatchDetails() {
     setSubmitting(true);
     try {
       const token = getRegisteredPushToken();
-      await apiPost(`/api/matches/${id}/vote`, { category: selectedCat, player: name.trim(), token });
-      const v = await apiGet(`/api/matches/${id}/votes`);
-      setVotes(v);
+      const res = await apiPost(`/api/matches/${id}/vote`, { category: selectedCat, player: name.trim(), token });
+      setVotesData(res);
       setName("");
     } catch (e) {
       console.warn(e);
@@ -99,12 +106,19 @@ export default function MatchDetails() {
   };
 
   const scheduleVoteReminders = async () => {
-    try {
-      await apiPost(`/api/notifications/schedule_for_match`, { matchId: id });
-      setScheduled(true);
-    } catch (e) {
-      console.warn(e);
-    }
+    try { await apiPost(`/api/notifications/schedule_for_match`, { matchId: id }); setScheduled(true); toast("Scheduled"); } catch (e) { console.warn(e); }
+  };
+
+  const rescheduleReminders = async () => {
+    try { await apiPost(`/api/notifications/reschedule_match`, { matchId: id }); toast("Rescheduled"); } catch (e) { console.warn(e); }
+  };
+
+  const cancelReminders = async () => {
+    try { await apiPost(`/api/notifications/cancel_match`, { matchId: id }); toast("Canceled"); } catch (e) { console.warn(e); }
+  };
+
+  const simulateFinish = async () => {
+    try { await apiPost(`/api/notifications/simulate_finish_now`, { matchId: id }); toast("Simulated finish; dispatch will send now"); } catch (e) { console.warn(e); }
   };
 
   if (loading)
@@ -123,26 +137,28 @@ export default function MatchDetails() {
 
   const kickoff = new Date(match.startTime).toLocaleString();
   const channels = (match.channels?.[country] as string[] | undefined) || [];
+  const Card: any = reduceEffects ? View : BlurView;
+  const cardProps: any = reduceEffects ? {} : { intensity: 30, tint: "dark" };
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 170 }}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 200 }}>
         <View style={styles.header}>
           {sportIcon(match.sport)}
           <Text style={styles.headerTxt}>{match.tournament}</Text>
           {match.subgroup ? <Text style={styles.subgroup}> · {match.subgroup}</Text> : null}
         </View>
 
-        <BlurView intensity={40} tint="dark" style={styles.card}>
+        <Card {...cardProps} style={styles.card}>
           <Text style={styles.time}>{kickoff}</Text>
           <View style={styles.teamsRow}>
             <Text style={styles.team}>{match.homeTeam?.name}</Text>
             <Text style={styles.vs}> — </Text>
             <Text style={styles.team}>{match.awayTeam?.name}</Text>
           </View>
-        </BlurView>
+        </Card>
 
-        <BlurView intensity={30} tint="dark" style={styles.card}>
+        <Card {...cardProps} style={styles.card}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Text style={styles.blockTitle}>Channels</Text>
             <TouchableOpacity onPress={() => setCountryOpen((s) => !s)} style={styles.countryBtn}>
@@ -162,9 +178,9 @@ export default function MatchDetails() {
             </View>
           )}
           <Text style={styles.channels}>{country}: {channels.length ? channels.join(", ") : "TBD"}</Text>
-        </BlurView>
+        </Card>
 
-        <BlurView intensity={30} tint="dark" style={styles.card}>
+        <Card {...cardProps} style={styles.card}>
           <Text style={styles.blockTitle}>Rate the match</Text>
           <View style={styles.row}>
             <TouchableOpacity onPress={() => rate(true)} style={[styles.btn, { backgroundColor: "#1a2" }]}> 
@@ -176,17 +192,18 @@ export default function MatchDetails() {
               <Text style={styles.btnTxt}>Dislike</Text>
             </TouchableOpacity>
           </View>
-        </BlurView>
+          {!!rating && <Text style={styles.voteLine}>Likes: {rating.likes} • Dislikes: {rating.dislikes} • {rating.likePct}% 👍</Text>}
+        </Card>
 
-        <BlurView intensity={30} tint="dark" style={styles.card}>
+        <Card {...cardProps} style={styles.card}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <Text style={styles.blockTitle}>Cast your vote</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
               {scheduled && <Text style={styles.subtle}>Reminders scheduled</Text>}
-              <TouchableOpacity onPress={scheduleVoteReminders} style={styles.smallBtn}>
-                <Ionicons name="notifications-outline" size={16} color="#fff" />
-                <Text style={styles.smallBtnTxt}>Schedule Vote Reminders</Text>
-              </TouchableOpacity>
+              <TouchableOpacity onPress={scheduleVoteReminders} style={styles.smallBtn}><Ionicons name="notifications-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Schedule</Text></TouchableOpacity>
+              <TouchableOpacity onPress={rescheduleReminders} style={styles.smallBtn}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Reschedule</Text></TouchableOpacity>
+              <TouchableOpacity onPress={cancelReminders} style={styles.smallBtn}><Ionicons name="close-circle-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity onPress={simulateFinish} style={styles.smallBtn}><Ionicons name="fast-forward-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Simulate finish</Text></TouchableOpacity>
             </View>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
@@ -210,16 +227,16 @@ export default function MatchDetails() {
             <Ionicons name="send-outline" size={18} color="#fff" />
             <Text style={styles.btnTxt}>{submitting ? "Submitting..." : "Submit Vote"}</Text>
           </TouchableOpacity>
-        </BlurView>
+        </Card>
 
-        <BlurView intensity={30} tint="dark" style={styles.card}>
+        <Card {...cardProps} style={styles.card}>
           <Text style={styles.blockTitle}>Fan voting (results)</Text>
-          {Object.keys(votes || {}).length === 0 ? (
+          {!votesData || Object.keys(votesData?.percentages || {}).length === 0 ? (
             <Text style={styles.voteLine}>No votes yet</Text>
           ) : (
-            Object.entries(votes || {}).map(([cat, entries]: any) => (
+            Object.entries(votesData.percentages || {}).map(([cat, entries]: any) => (
               <View key={cat} style={{ marginTop: 10 }}>
-                <Text style={[styles.voteLine, { marginBottom: 6 }]}>{cat.replaceAll("_", " ")}</Text>
+                <Text style={[styles.voteLine, { marginBottom: 6 }]}>{cat.replaceAll("_", " ")} • total {votesData.totals?.[cat] ?? 0}</Text>
                 {Object.entries(entries as any).map(([player, pct]: any) => (
                   <View key={player} style={styles.barRow}>
                     <View style={styles.barBg}>
@@ -231,7 +248,7 @@ export default function MatchDetails() {
               </View>
             ))
           )}
-        </BlurView>
+        </Card>
       </ScrollView>
     </KeyboardAvoidingView>
   );

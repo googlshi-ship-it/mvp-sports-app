@@ -12,6 +12,8 @@ from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 import requests
 import asyncio
+import csv
+from io import StringIO
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -137,7 +139,9 @@ async def ensure_indexes():
     await db.notifications.create_index([("deliverAt", 1)])
     await db.notifications.create_index([("status", 1)])
     await db.notifications.create_index([("matchId", 1)])
+    await db.notifications.create_index([("matchId", 1), ("token", 1), ("type", 1)], unique=True)
     await db.device_votes.create_index([("matchId", 1), ("token", 1)], unique=True)
+    await db.dispatch_logs.create_index([("ts", -1)])
 
 
 @app.on_event("startup")
@@ -269,6 +273,19 @@ async def get_match(match_id: str):
     return MatchDB(**m)
 
 
+@api_router.get("/matches/{match_id}/rating")
+async def get_rating(match_id: str):
+    try:
+        oid = ObjectId(match_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    doc = await db.ratings.find_one({"matchId": oid}) or {}
+    likes = doc.get("likes", 0)
+    dislikes = doc.get("dislikes", 0)
+    total = max(likes + dislikes, 1)
+    return {"likes": likes, "dislikes": dislikes, "likePct": round(likes * 100 / total, 1)}
+
+
 @api_router.post("/matches/{match_id}/rate")
 async def rate_match(match_id: str, body: RateInput):
     try:
@@ -319,9 +336,12 @@ async def vote_match(match_id: str, body: VoteInput):
         return {k: round(v * 100 / total, 1) for k, v in counter.items()}
 
     out = {}
+    totals = {}
     for cat in allowed:
-        out[cat] = to_pct(doc.get("votes", {}).get(cat, {}))
-    return out
+        cnt = doc.get("votes", {}).get(cat, {})
+        totals[cat] = sum(cnt.values())
+        out[cat] = to_pct(cnt)
+    return {"percentages": out, "totals": totals}
 
 
 @api_router.get("/matches/{match_id}/votes")
@@ -343,9 +363,12 @@ async def get_votes(match_id: str):
         return {k: round(v * 100 / total, 1) for k, v in counter.items()}
 
     out = {}
+    totals = {}
     for cat in allowed:
-        out[cat] = to_pct(doc.get("votes", {}).get(cat, {}))
-    return out
+        cnt = doc.get("votes", {}).get(cat, {})
+        totals[cat] = sum(cnt.values())
+        out[cat] = to_pct(cnt)
+    return {"percentages": out, "totals": totals}
 
 
 class PushRegister(BaseModel):
@@ -447,6 +470,29 @@ async def schedule_for_match(body: ScheduleRequest):
     return {"scheduled": True, "finalAt": finish.isoformat()}
 
 
+@api_router.post("/notifications/reschedule_match")
+async def reschedule_match(body: ScheduleRequest):
+    try:
+        oid = ObjectId(body.matchId)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    # Cancel current pending
+    await db.notifications.update_many({"matchId": oid, "status": "pending"}, {"$set": {"status": "canceled", "updatedAt": datetime.utcnow()}})
+    # Schedule fresh
+    await _schedule_for_match_oid(oid)
+    return {"ok": True}
+
+
+@api_router.post("/notifications/cancel_match")
+async def cancel_match(body: ScheduleRequest):
+    try:
+        oid = ObjectId(body.matchId)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    await db.notifications.update_many({"matchId": oid, "status": "pending"}, {"$set": {"status": "canceled", "updatedAt": datetime.utcnow()}})
+    return {"ok": True}
+
+
 @api_router.post("/notifications/schedule_for_next_48h")
 async def schedule_for_next_48h():
     now = datetime.now(timezone.utc)
@@ -457,6 +503,33 @@ async def schedule_for_next_48h():
     return {"count": len(matches)}
 
 
+class ScheduleHours(BaseModel):
+    hours: int
+
+
+@api_router.post("/notifications/schedule_for_next_hours")
+async def schedule_for_next_hours(body: ScheduleHours):
+    now = datetime.now(timezone.utc)
+    end = now + timedelta(hours=max(1, int(body.hours)))
+    matches = await db.matches.find({"startTime": {"$gte": now, "$lte": end}}).to_list(10000)
+    for m in matches:
+        await _schedule_for_match_oid(m["_id"])
+    return {"count": len(matches)}
+
+
+@api_router.post("/notifications/simulate_finish_now")
+async def simulate_finish_now(body: ScheduleRequest):
+    try:
+        oid = ObjectId(body.matchId)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    await _schedule_for_match_oid(oid)
+    now = datetime.now(timezone.utc)
+    # Make due immediately
+    await db.notifications.update_many({"matchId": oid, "type": {"$in": ["final", "12h"]}}, {"$set": {"deliverAt": now, "updatedAt": now}})
+    return {"ok": True}
+
+
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 
 
@@ -465,51 +538,36 @@ def chunk(arr, size):
         yield arr[i:i+size]
 
 
-async def _dispatch_now_internal():
+@api_router.get("/notifications/stats")
+async def notif_stats():
     now = datetime.now(timezone.utc)
-    pending = await db.notifications.find({"deliverAt": {"$lte": now}, "status": "pending"}).to_list(10000)
-    if not pending:
-        return 0
+    since = now - timedelta(hours=24)
+    pending = await db.notifications.count_documents({"status": "pending"})
+    sent24 = await db.notifications.count_documents({"status": "sent", "sentAt": {"$gte": since}})
+    skipped24 = await db.notifications.count_documents({"status": "skipped_voted", "updatedAt": {"$gte": since}})
+    error24 = await db.notifications.count_documents({"status": "error", "updatedAt": {"$gte": since}})
+    last = await db.dispatch_logs.find().sort("ts", -1).limit(1).to_list(1)
+    last_log = last[0] if last else None
+    return {
+        "pending": pending,
+        "sent24": sent24,
+        "skipped24": skipped24,
+        "error24": error24,
+        "last": last_log,
+    }
 
-    # Group notifications by matchId to build message text
-    match_ids = list({n["matchId"] for n in pending})
-    matches = {}
-    for mid in match_ids:
-        doc = await db.matches.find_one({"_id": mid})
-        if doc:
-            matches[str(mid)] = doc
 
-    total_sent = 0
-    for batch in chunk(pending, 90):
-        msgs = []
-        ids = []
-        for n in batch:
-            # Safeguard: skip 12h if this device already voted
-            if n["type"] == "12h":
-                dv = await db.device_votes.find_one({"matchId": n["matchId"], "token": n["token"]})
-                if dv:
-                    await db.notifications.update_one({"_id": n["_id"]}, {"$set": {"status": "skipped_voted", "updatedAt": datetime.utcnow()}})
-                    continue
-            mdoc = matches.get(str(n["matchId"])) or {}
-            body = build_final_message(mdoc) if n["type"] == "final" else build_12h_message(mdoc)
-            msgs.append({
-                "to": n["token"],
-                "sound": "default",
-                "title": "MVP",
-                "body": body,
-                "data": {"matchId": str(n["matchId"]), "type": n["type"]},
-            })
-            ids.append(n["_id"])
-        if not msgs:
-            continue
-        try:
-            r = requests.post(EXPO_PUSH_URL, json=msgs, timeout=20, headers={"Accept": "application/json", "Content-Type": "application/json"})
-            await db.notifications.update_many({"_id": {"$in": ids}}, {"$set": {"status": "sent", "sentAt": datetime.utcnow()}})
-            total_sent += len(msgs)
-        except Exception as e:
-            logging.warning(f"Push send failed: {e}")
-            await db.notifications.update_many({"_id": {"$in": ids}}, {"$set": {"status": "error", "error": str(e)}})
-    return total_sent
+@api_router.get("/notifications/pending")
+async def notif_pending(limit: int = 50):
+    docs = await db.notifications.find({"status": "pending"}).sort("deliverAt", 1).limit(int(limit)).to_list(int(limit))
+    out = []
+    for d in docs:
+        out.append({
+            "matchId": str(d.get("matchId")),
+            "dueAt": d.get("deliverAt").isoformat() if isinstance(d.get("deliverAt"), datetime) else d.get("deliverAt"),
+            "type": d.get("type"),
+        })
+    return out
 
 
 @api_router.post("/notifications/dispatch_now")
@@ -532,14 +590,96 @@ async def test_push(body: Dict[str, str]):
         "data": {"test": True},
     }]
     try:
-        r = requests.post(EXPO_PUSH_URL, json=payload, timeout=20, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        _ = requests.post(EXPO_PUSH_URL, json=payload, timeout=20, headers={"Accept": "application/json", "Content-Type": "application/json"})
         return {"ok": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.get("/notifications/logs")
+async def get_logs(limit: int = 200):
+    logs = await db.dispatch_logs.find().sort("ts", -1).limit(int(limit)).to_list(int(limit))
+    return logs
+
+
+@api_router.get("/notifications/logs.csv")
+async def get_logs_csv(limit: int = 200):
+    logs = await db.dispatch_logs.find().sort("ts", -1).limit(int(limit)).to_list(int(limit))
+    sio = StringIO()
+    writer = csv.writer(sio)
+    writer.writerow(["ts", "sent", "skipped_voted", "errors", "durationMs", "lastError"]) 
+    for l in logs:
+        writer.writerow([
+            l.get("ts"), l.get("sent", 0), l.get("skipped_voted", 0), l.get("errors", 0), l.get("durationMs", 0), (l.get("lastError") or "").replace('\n', ' ')
+        ])
+    return sio.getvalue()
+
+
+async def _dispatch_now_internal():
+    start = datetime.now(timezone.utc)
+    skipped_count = 0
+    errors = 0
+    last_error = None
+
+    now = start
+    pending = await db.notifications.find({"deliverAt": {"$lte": now}, "status": "pending"}).to_list(10000)
+    if not pending:
+        # Still log empty tick
+        await db.dispatch_logs.insert_one({"ts": start.isoformat(), "sent": 0, "skipped_voted": 0, "errors": 0, "durationMs": 0})
+        return 0
+
+    match_ids = list({n["matchId"] for n in pending})
+    matches = {}
+    for mid in match_ids:
+        doc = await db.matches.find_one({"_id": mid})
+        if doc:
+            matches[str(mid)] = doc
+
+    total_sent = 0
+    for batch in chunk(pending, 90):
+        msgs = []
+        ids = []
+        for n in batch:
+            if n["type"] == "12h":
+                dv = await db.device_votes.find_one({"matchId": n["matchId"], "token": n["token"]})
+                if dv:
+                    skipped_count += 1
+                    await db.notifications.update_one({"_id": n["_id"]}, {"$set": {"status": "skipped_voted", "updatedAt": datetime.utcnow()}})
+                    continue
+            mdoc = matches.get(str(n["matchId"])) or {}
+            body = build_final_message(mdoc) if n["type"] == "final" else build_12h_message(mdoc)
+            msgs.append({
+                "to": n["token"],
+                "sound": "default",
+                "title": "MVP",
+                "body": body,
+                "data": {"matchId": str(n["matchId"]), "type": n["type"]},
+            })
+            ids.append(n["_id"])
+        if not msgs:
+            continue
+        try:
+            _ = requests.post(EXPO_PUSH_URL, json=msgs, timeout=20, headers={"Accept": "application/json", "Content-Type": "application/json"})
+            await db.notifications.update_many({"_id": {"$in": ids}}, {"$set": {"status": "sent", "sentAt": datetime.utcnow()}})
+            total_sent += len(msgs)
+        except Exception as e:
+            errors += len(msgs)
+            last_error = str(e)
+            await db.notifications.update_many({"_id": {"$in": ids}}, {"$set": {"status": "error", "error": str(e), "updatedAt": datetime.utcnow()}})
+
+    duration_ms = int((datetime.now(timezone.utc) - start).total_seconds() * 1000)
+    await db.dispatch_logs.insert_one({
+        "ts": start.isoformat(),
+        "sent": total_sent,
+        "skipped_voted": skipped_count,
+        "errors": errors,
+        "durationMs": duration_ms,
+        "lastError": last_error,
+    })
+    return total_sent
+
+
 async def _dispatch_loop():
-    # MVP loop: dispatch every 90 seconds
     while True:
         try:
             await _dispatch_now_internal()
@@ -557,11 +697,9 @@ def _parse_ts(d: Dict) -> Optional[datetime]:
     ts = d.get("strTimestamp") or None
     if ts:
         try:
-            # TheSportsDB strTimestamp is UTC like '2025-07-01 19:45:00'
             return datetime.strptime(ts, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
         except Exception:
             pass
-    # Fallback
     date_s = d.get("dateEvent")
     time_s = (d.get("strTime") or "00:00:00").strip()
     if date_s:
@@ -611,7 +749,6 @@ async def import_thesportsdb(body: ImportRequest):
                     "source": "thesportsdb",
                     "sourceId": ext_id,
                 }
-                # Upsert by sourceId
                 existing = await db.matches.find_one({"sourceId": ext_id})
                 if existing:
                     await db.matches.update_one({"_id": existing["_id"]}, {"$set": doc})

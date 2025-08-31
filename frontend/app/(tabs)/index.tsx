@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { BlurView } from "expo-blur";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { apiGet, apiPost } from "../../src/api/client";
+import { useUIStore } from "../../src/store/ui";
 
 const DEFAULT_COUNTRY = "CH";
 
@@ -25,6 +26,7 @@ export default function MatchesScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [sections, setSections] = useState<any[]>([]);
+  const reduceEffects = useUIStore((s) => s.reduceEffects);
 
   const iconFor = (sport: Match["sport"]) => {
     if (sport === "football") return <Ionicons name="football-outline" size={16} color="#8a7cff" />;
@@ -36,11 +38,7 @@ export default function MatchesScreen() {
     setLoading(true);
     try {
       const grouped = await apiGet(`/api/matches/grouped?country=${DEFAULT_COUNTRY}`);
-      const make = (key: string, title: string) =>
-        (grouped[key] || []).map((m: any) => ({
-          key: m.id,
-          ...m,
-        }));
+      const make = (key: string, title: string) => (grouped[key] || []).map((m: any) => ({ key: m.id, ...m }));
       const s = [
         { title: "Today", data: make("today", "Today") },
         { title: "Tomorrow", data: make("tomorrow", "Tomorrow") },
@@ -54,24 +52,19 @@ export default function MatchesScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const onImport = async () => {
-    try {
-      await apiPost("/api/import/thesportsdb", { days: 3 });
-      await load();
-    } catch (e) {
-      console.warn(e);
-    }
+    try { await apiPost("/api/import/thesportsdb", { days: 3 }); await load(); } catch (e) { console.warn(e); }
   };
 
   const renderItem = ({ item }: { item: Match }) => {
     const time = new Date(item.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const Card: any = reduceEffects ? View : BlurView;
+    const cardProps: any = reduceEffects ? {} : { intensity: 50, tint: "dark" };
     return (
       <TouchableOpacity activeOpacity={0.8} onPress={() => router.push(`/match/${item.id}`)}>
-        <BlurView intensity={50} tint="dark" style={styles.card}>
+        <Card {...cardProps} style={styles.card}>
           <View style={styles.rowBetween}>
             <Text style={styles.time}>{time}</Text>
             <View style={styles.tournamentRow}>
@@ -88,7 +81,7 @@ export default function MatchesScreen() {
           <Text style={styles.channels} numberOfLines={1}>
             Channels ({DEFAULT_COUNTRY}): {item.channelsForCountry?.join(", ") || "TBD"}
           </Text>
-        </BlurView>
+        </Card>
       </TouchableOpacity>
     );
   };
