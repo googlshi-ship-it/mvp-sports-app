@@ -367,6 +367,17 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ On startup, seeds La Liga 2025 and UCL 2025 with 3 upcoming matches and demo lineups/unavailables."
+  - task: "Backend smoke tests (7 core endpoints)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ All 7 backend smoke tests passed: GET /api/ (200 with message), GET /api/version (200 with version/gitSha), GET /api/competitions (200 with 2 competitions), GET /api/competitions/{id} (200 with name/country/season/type), GET /api/competitions/{id}/matches?tz=Europe/Zurich (200 with proper fields), GET /api/matches (200 with isVotingOpen/start_time_local), GET /api/matches/grouped?country=CH (200 with today/tomorrow/week arrays). Backend fully operational."
 
 # Update metadata and plan
 metadata:
