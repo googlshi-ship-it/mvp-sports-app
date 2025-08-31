@@ -254,3 +254,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Please test backend endpoints in order: GET /api/, POST /api/import/thesportsdb (days=1), GET /api/matches/grouped?country=CH, create a sample match via POST /api/matches, GET that match by id, POST rate/vote and GET votes."
+  - agent: "testing"
+    message: "✅ Backend testing completed successfully! All high-priority endpoints are working correctly. Fixed critical Pydantic v2 ObjectId compatibility issue and duplicate sourceId constraint. All 9 test cases passed including: root health check, TheSportsDB import, match CRUD operations, ratings, and voting system. Backend is ready for production use."
