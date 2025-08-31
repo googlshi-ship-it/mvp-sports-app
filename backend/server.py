@@ -117,6 +117,19 @@ def to_local_iso(dt: datetime, tz: Optional[str]) -> Optional[str]:
         return None
 
 
+# Recursive sanitizer to avoid ObjectId/unsupported types in JSON
+def sanitize(o):
+    if isinstance(o, ObjectId):
+        return str(o)
+    if isinstance(o, datetime):
+        return o.isoformat()
+    if isinstance(o, list):
+        return [sanitize(x) for x in o]
+    if isinstance(o, dict):
+        return {k: sanitize(v) for k, v in o.items()}
+    return o
+
+
 async def ensure_indexes():
     await db.matches.create_index("startTime")
     await db.matches.create_index("sourceId", unique=True)
