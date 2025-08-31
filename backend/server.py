@@ -29,22 +29,7 @@ api_router = APIRouter(prefix="/api")
 # ---------------------------
 # Utils
 # ---------------------------
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, value):
-        if isinstance(value, ObjectId):
-            return value
-        if not ObjectId.is_valid(value):
-            raise ValueError('Invalid ObjectId')
-        return ObjectId(value)
-
-    @classmethod
-    def __modify_schema__(cls, field_schema):
-        field_schema.update(type='string')
+# Removed PyObjectId class - using string IDs instead for Pydantic v2 compatibility
 
 
 def start_of_day(dt: datetime) -> datetime:
