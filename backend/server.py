@@ -594,7 +594,7 @@ async def matches_grouped(country: Optional[str] = None, tz: Optional[str] = Non
             st = datetime.fromisoformat(st)
         if st <= today_end:
             bucket = "today"
-        elif st &lt;= tomorrow_end:
+        elif st <= tomorrow_end:
             bucket = "tomorrow"
         else:
             bucket = "week"
