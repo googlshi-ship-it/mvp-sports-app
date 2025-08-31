@@ -678,7 +678,7 @@ async def rate_match(match_id: str, body: RateInput, current=Depends(get_user_fr
     dislikes = doc.get("dislikes", 0)
     total = max(likes + dislikes, 1)
     like_pct = round(likes * 100 / total, 1)
-    delta = 1 if (body.like and like_pct &gt;= 50) or ((not body.like) and like_pct &lt; 50) else -1
+    delta = 1 if (body.like and like_pct >= 50) or ((not body.like) and like_pct < 50) else -1
     await update_user_score(current["_id"], delta)
     return {"likes": likes, "dislikes": dislikes, "likePct": like_pct}
 
