@@ -406,7 +406,7 @@ def categories_for_sport(sport: str) -> List[str]:
 def assert_voting_open_or_raise(match_doc: Dict):
     comp = compute_final_and_window(match_doc)
     now = datetime.now(timezone.utc)
-    if now &lt; comp["voting_open_at"]:
+    if now < comp["voting_open_at"]:
         remaining = int((comp["voting_open_at"] - now).total_seconds())
         raise HTTPException(status_code=403, detail={
             "reason": "voting_not_open",
