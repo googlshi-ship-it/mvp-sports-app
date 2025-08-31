@@ -414,7 +414,7 @@ def assert_voting_open_or_raise(match_doc: Dict):
             "now": now.isoformat(),
             "remainingSeconds": max(remaining, 0),
         })
-    if now &gt;= comp["voting_close_at"]:
+    if now >= comp["voting_close_at"]:
         raise HTTPException(status_code=403, detail={
             "reason": "voting_closed",
             "closedAt": comp["voting_close_at"].isoformat(),
