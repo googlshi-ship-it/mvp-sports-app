@@ -618,17 +618,10 @@ async def matches_grouped(country: Optional[str] = None, tz: Optional[str] = Non
             bucket = "week"
         extra = with_voting_status(m)
         st_local = to_local_iso(st, tz) if tz else None
-        # Convert ObjectId fields to strings and datetime fields to ISO strings
-        if "competition_id" in m and m["competition_id"]:
-            m["competition_id"] = str(m["competition_id"])
-        # Ensure _id is string as well
-        m_id = str(m["_id"]) if isinstance(m.get("_id"), ObjectId) else m.get("_id")
-        m["_id"] = m_id
-        # Convert datetime fields to ISO strings for JSON serialization
-        for dt_field in ["lineups_updated_at", "injuries_updated_at"]:
-            if dt_field in m and m[dt_field]:
-                m[dt_field] = m[dt_field].isoformat() if hasattr(m[dt_field], 'isoformat') else m[dt_field]
-        grouped[bucket].append({**m, "id": str(m_id), "channelsForCountry": pick_channels(m), **extra, "start_time_local": st_local})
+        # Sanitize full match doc to avoid ObjectId/datetime issues
+        m_s = sanitize(m)
+        m_id = m_s.get("_id")
+        grouped[bucket].append({**m_s, "id": str(m_id), "channelsForCountry": pick_channels(m_s), **extra, "start_time_local": st_local})
     return sanitize(grouped)
 
 
