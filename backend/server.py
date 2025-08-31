@@ -629,7 +629,7 @@ async def matches_grouped(country: Optional[str] = None, tz: Optional[str] = Non
             if dt_field in m and m[dt_field]:
                 m[dt_field] = m[dt_field].isoformat() if hasattr(m[dt_field], 'isoformat') else m[dt_field]
         grouped[bucket].append({**m, "id": str(m_id), "channelsForCountry": pick_channels(m), **extra, "start_time_local": st_local})
-    return grouped
+    return sanitize(grouped)
 
 
 @api_router.get("/matches/{match_id}")
