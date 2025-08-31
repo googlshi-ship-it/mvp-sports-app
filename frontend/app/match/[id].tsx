@@ -115,7 +115,7 @@ export default function MatchDetails() {
   };
 
   const scheduleVoteReminders = async () => { try { await apiPost(`/api/notifications/schedule_for_match`, { matchId: id }); setScheduled(true); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ?? 0); toast("Scheduled"); } catch (e) { console.warn(e); } };
-  const rescheduleReminders = async () => { try { await apiPost(`/api/notifications/reschedule_match`, { matchId: id }); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ~~ 0); toast("Rescheduled"); } catch (e) { console.warn(e); } };
+  const rescheduleReminders = async () => { try { await apiPost(`/api/notifications/reschedule_match`, { matchId: id }); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ?? 0); toast("Rescheduled"); } catch (e) { console.warn(e); } };
   const cancelReminders = async () => { try { await apiPost(`/api/notifications/cancel_match`, { matchId: id }); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ?? 0); toast("Canceled"); } catch (e) { console.warn(e); } };
   const simulateFinish = async () => { try { await apiPost(`/api/notifications/simulate_finish_now`, { matchId: id }); toast("Simulated finish; dispatch will send now"); } catch (e) { console.warn(e); } };
   const notifyTestAudience = async () => { try { const res = await apiPost(`/api/notifications/notify_test_audience`, { matchId: id }); toast(`Sent: ${res.sent}`); } catch (e) { console.warn(e); } };
