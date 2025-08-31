@@ -60,6 +60,7 @@ export default function MatchesScreen() {
     const time = new Date(item.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     return (
       <TouchableOpacity
+        accessibilityLabel={RIVALRY_UI && (item as any)?.rivalry?.enabled ? "Rivalry match" : undefined}
         activeOpacity={0.8}
         onPress={() => router.push(`/match/${item.id}`)}
         onLongPress={() => {
