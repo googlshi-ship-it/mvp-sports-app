@@ -248,7 +248,7 @@ backend:
         comment: "✅ Admin overrides working correctly. POST /api/matches/{id}/lineups with X-Admin-Token updates formation_home and lineups_status with proper lineups_updated_at timestamp. POST /api/matches/{id}/injuries with X-Admin-Token updates unavailable_home list with proper injuries_updated_at timestamp."
   - task: "Matches grouped with timezone (existing endpoint compatibility)"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "medium"
@@ -256,6 +256,10 @@ backend:
     status_history:
       - working: false
         agent: "testing"
+        comment: "❌ Minor issue: GET /api/matches/grouped?tz=Europe/Madrid returns 500 error due to ObjectId serialization in datetime comparison. Core functionality works but timezone parameter causes issues. Needs ObjectId/datetime serialization fix."
+      - working: true
+        agent: "testing"
+        comment: "✅ Re-tested GET /api/matches/grouped endpoint. Both scenarios now working: (1) GET /api/matches/grouped?tz=Europe/Madrid returns 200 with proper timezone-adjusted start_time_local fields, (2) GET /api/matches/grouped?country=CH returns 200 with proper channelsForCountry arrays. Total 7 matches found across today/tomorrow/week buckets. ObjectId serialization issue has been resolved."
   - agent: "testing"
     message: "✅ Backend testing completed for Competitions + Lineups/Injuries. All new endpoints working. Seeding created 2 competitions and 3 matches. Admin overrides validated with X-Admin-Token. Fixed ObjectId serialization in grouped endpoint."
 
