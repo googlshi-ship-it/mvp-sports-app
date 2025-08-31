@@ -192,13 +192,13 @@ async def seed_competitions_and_matches():
         res2 = await db.competitions.insert_one(ucl)
 
         now = datetime.now(timezone.utc)
-        def mk_football(hours_from_now: int, comp_id):
+        def mk_football(hours_from_now: int, comp_id=None, home="Team A", away="Team B", rivalry=None, tournament=None):
             return {
                 "sport": "football",
-                "tournament": "La Liga" if comp_id == res1.inserted_id else "UEFA Champions League",
+                "tournament": tournament or ("La Liga" if comp_id == res1.inserted_id else "UEFA Champions League"),
                 "subgroup": "Matchday",
-                "homeTeam": {"type": "club", "name": "Team A", "countryCode": "ES"},
-                "awayTeam": {"type": "club", "name": "Team B", "countryCode": "ES"},
+                "homeTeam": {"type": "club", "name": home, "countryCode": "ES"},
+                "awayTeam": {"type": "club", "name": away, "countryCode": "ES"},
                 "startTime": now + timedelta(hours=hours_from_now),
                 "status": "scheduled",
                 "channels": {"CH": ["blue Sport"], "ES": ["Movistar"]},
@@ -217,30 +217,25 @@ async def seed_competitions_and_matches():
                     {"number": "1", "name": "GK Away", "pos": "GK", "role": "starter", "playerId": "away_gk", "nationalityCode": "ES"},
                     {"number": "10", "name": "CF Away", "pos": "FW", "role": "starter", "playerId": "away_cf", "nationalityCode": "ES"},
                 ],
-                "bench_home": [
-                    {"number": "12", "name": "Sub H1", "pos": "MF", "role": "sub", "nationalityCode": "ES"}
-                ],
-                "bench_away": [
-                    {"number": "12", "name": "Sub A1", "pos": "MF", "role": "sub", "nationalityCode": "ES"}
-                ],
+                "bench_home": [{"number": "12", "name": "Sub H1", "pos": "MF", "role": "sub", "nationalityCode": "ES"}],
+                "bench_away": [{"number": "12", "name": "Sub A1", "pos": "MF", "role": "sub", "nationalityCode": "ES"}],
                 "unavailable_home": [
                     {"name": "Injured H1", "reason": "Hamstring", "type": "injury", "status": "out", "nationalityCode": "ES"},
                     {"name": "Doubt H2", "reason": "Knock", "type": "injury", "status": "doubtful", "nationalityCode": "ES"},
                 ],
-                "unavailable_away": [
-                    {"name": "Susp A1", "reason": "Red card", "type": "suspension", "status": "out", "nationalityCode": "ES"}
-                ],
+                "unavailable_away": [{"name": "Susp A1", "reason": "Red card", "type": "suspension", "status": "out", "nationalityCode": "ES"}],
                 "lineups_status": "probable",
                 "lineups_updated_at": datetime.now(timezone.utc),
                 "injuries_updated_at": datetime.now(timezone.utc),
+                "rivalry": rivalry or {"enabled": False, "intensity": 0},
             }
-        def mk_basketball(hours_from_now: int):
+        def mk_basketball(hours_from_now: int, home="Madrid Hoops", away="Barcelona Dunks", rivalry=None):
             return {
                 "sport": "basketball",
                 "tournament": "EuroLeague",
                 "subgroup": "Round",
-                "homeTeam": {"type": "club", "name": "Madrid Hoops", "countryCode": "ES"},
-                "awayTeam": {"type": "club", "name": "Barcelona Dunks", "countryCode": "ES"},
+                "homeTeam": {"type": "club", "name": home, "countryCode": "ES"},
+                "awayTeam": {"type": "club", "name": away, "countryCode": "ES"},
                 "startTime": now + timedelta(hours=hours_from_now),
                 "status": "scheduled",
                 "channels": {"ES": ["DAZN"]},
@@ -263,14 +258,15 @@ async def seed_competitions_and_matches():
                 "lineups_status": "probable",
                 "lineups_updated_at": datetime.now(timezone.utc),
                 "injuries_updated_at": datetime.now(timezone.utc),
+                "rivalry": rivalry or {"enabled": False, "intensity": 0},
             }
-        def mk_ufc(hours_from_now: int):
+        def mk_ufc(hours_from_now: int, home="Fighter A", away="Fighter B", rivalry=None):
             return {
                 "sport": "ufc",
                 "tournament": "UFC Fight Night",
                 "subgroup": "Main Card",
-                "homeTeam": {"type": "club", "name": "Fighter A", "countryCode": "US"},
-                "awayTeam": {"type": "club", "name": "Fighter B", "countryCode": "BR"},
+                "homeTeam": {"type": "club", "name": home, "countryCode": "US"},
+                "awayTeam": {"type": "club", "name": away, "countryCode": "BR"},
                 "startTime": now + timedelta(hours=hours_from_now),
                 "status": "scheduled",
                 "channels": {"US": ["ESPN+"]},
@@ -278,8 +274,8 @@ async def seed_competitions_and_matches():
                 "sourceId": f"seed_{uuid.uuid4()}",
                 "stadium": "T-Mobile Arena",
                 "venue": "Las Vegas",
-                "lineup_home": [{"number": "—", "name": "Fighter A", "pos": "", "role": "starter"}],
-                "lineup_away": [{"number": "—", "name": "Fighter B", "pos": "", "role": "starter"}],
+                "lineup_home": [{"number": "—", "name": home, "pos": "", "role": "starter"}],
+                "lineup_away": [{"number": "—", "name": away, "pos": "", "role": "starter"}],
                 "bench_home": [],
                 "bench_away": [],
                 "unavailable_home": [],
@@ -287,6 +283,7 @@ async def seed_competitions_and_matches():
                 "lineups_status": "confirmed",
                 "lineups_updated_at": datetime.now(timezone.utc),
                 "injuries_updated_at": datetime.now(timezone.utc),
+                "rivalry": rivalry or {"enabled": False, "intensity": 0},
             }
 
         matches = [
@@ -297,6 +294,11 @@ async def seed_competitions_and_matches():
             mk_basketball(30),
             mk_ufc(20),
             mk_ufc(44),
+            # Rivalry seeds
+            mk_football(10, res1.inserted_id, home="Barcelona", away="Real Madrid", rivalry={"enabled": True, "intensity": 2, "tag": "El Clásico"}, tournament="La Liga"),
+            mk_football(14, None, home="Lazio", away="Roma", rivalry={"enabled": True, "intensity": 2, "tag": "Derby della Capitale"}, tournament="Serie A"),
+            mk_football(18, None, home="Liverpool", away="Manchester United", rivalry={"enabled": True, "intensity": 2, "tag": "North-West Derby"}, tournament="Premier League"),
+            mk_basketball(22, home="Boston Celtics", away="Los Angeles Lakers", rivalry={"enabled": True, "intensity": 2, "tag": "Historic Rivalry"}),
         ]
         for m in matches:
             comp = compute_final_and_window(m)
@@ -351,6 +353,12 @@ class Score(BaseModel):
     away: Optional[int] = None
 
 
+class Rivalry(BaseModel):
+    enabled: bool = False
+    intensity: Literal[0, 1, 2] = 0
+    tag: Optional[str] = None
+
+
 class MatchBase(BaseModel):
     sport: Sport
     tournament: str
@@ -382,6 +390,8 @@ class MatchBase(BaseModel):
     lineups_status: Optional[Literal["none", "probable", "confirmed"]] = "none"
     lineups_updated_at: Optional[datetime] = None
     injuries_updated_at: Optional[datetime] = None
+    # Rivalry (Derby)
+    rivalry: Optional[Rivalry] = Rivalry()
 
 
 class MatchDB(MatchBase):
@@ -763,6 +773,41 @@ async def set_voting_window(match_id: str, body: Dict[str, Optional[str]]):
     m = await db.matches.find_one({"_id": oid})
     m["_id"] = str(m["_id"])  # type: ignore
     return {**m, **with_voting_status(m)}
+
+
+# ---- Rivalry Admin Endpoint ----
+@api_router.post("/matches/{match_id}/rivalry")
+async def set_rivalry(match_id: str, body: Dict, admin=Depends(require_admin)):
+    try:
+        oid = ObjectId(match_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    # Build updates
+    updates: Dict[str, Union[str, int, bool, Dict]] = {}
+    enabled = body.get("enabled")
+    intensity = body.get("intensity")
+    tag = body.get("tag")
+    current = await db.matches.find_one({"_id": oid})
+    if not current:
+        raise HTTPException(status_code=404, detail="Match not found")
+    riv = current.get("rivalry") or {"enabled": False, "intensity": 0}
+    if enabled is not None:
+        riv["enabled"] = bool(enabled)
+    if intensity is not None:
+        try:
+            iv = int(intensity)
+            if iv not in [0, 1, 2]:
+                raise ValueError()
+            riv["intensity"] = iv
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid intensity value")
+    if tag is not None:
+        riv["tag"] = str(tag) if str(tag).strip() else None
+    updates["rivalry"] = riv
+    await db.matches.update_one({"_id": oid}, {"$set": updates})
+    m = await db.matches.find_one({"_id": oid})
+    m["_id"] = str(m["_id"])  # type: ignore
+    return sanitize(m)
 
 
 @api_router.get("/matches/{match_id}/rating")
