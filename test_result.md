@@ -101,3 +101,135 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Build MVP sports app with schedules + TV channels + fan ratings; data from TheSportsDB; sports Football/Basketball/UFC; Expo Push; default country CH."
+backend:
+  - task: "Root health: GET /api/"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Added root endpoint to confirm backend is up."
+  - task: "Status checks CRUD"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Added POST/GET /api/status for basic DB write/read."
+  - task: "Import TheSportsDB events"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Added POST /api/import/thesportsdb with days param and CH channel mapping."
+  - task: "Matches list/grouped/detail"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "GET /api/matches, /api/matches/grouped, /api/matches/{id}."
+  - task: "Ratings like/dislike"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "POST /api/matches/{id}/rate increments likes/dislikes."
+  - task: "Fan voting endpoints"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "POST /api/matches/{id}/vote and GET /api/matches/{id}/votes return percentages."
+  - task: "Push register"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "POST /api/push/register stores Expo push tokens."
+frontend:
+  - task: "Expo Router tabs + navigation"
+    implemented: true
+    working: false
+    file: "/app/frontend/app/(tabs)/_layout.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Added tabs: Matches, My Teams, Settings with glass tab bar."
+  - task: "Match list with grouped sections and Import trigger"
+    implemented: true
+    working: false
+    file: "/app/frontend/app/(tabs)/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Reads /api/matches/grouped and shows glass cards; Import button calls backend importer."
+  - task: "Match details with rating + votes read"
+    implemented: true
+    working: false
+    file: "/app/frontend/app/match/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Displays tournament, teams, channels, allows like/dislike and shows voting results."
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Backend: Import TheSportsDB"
+    - "Backend: Matches grouped/detail"
+    - "Backend: Ratings + Votes"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Please test backend endpoints in order: GET /api/, POST /api/import/thesportsdb (days=1), GET /api/matches/grouped?country=CH, create a sample match via POST /api/matches, GET that match by id, POST rate/vote and GET votes."
