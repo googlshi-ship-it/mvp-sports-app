@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, SectionList, RefreshControl, TouchableOpacity }
 import GlassCard from "../../src/components/GlassCard";
 import { useRouter } from "expo-router";
 import { BlurView } from "expo-blur";
+import GlassCard from "../../src/components/GlassCard";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { apiGet, apiPost } from "../../src/api/client";
 import { useUIStore } from "../../src/store/ui";
