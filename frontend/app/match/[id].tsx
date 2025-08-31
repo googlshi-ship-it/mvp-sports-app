@@ -180,6 +180,16 @@ export default function MatchDetails() {
     </Text>
   );
 
+  const derbyChip = () => {
+    if (!RIVALRY_UI || !match?.rivalry?.enabled) return null;
+    const label = match?.rivalry?.tag ? String(match.rivalry.tag) : "Derby";
+    return (
+      <View style={styles.derbyChip} accessibilityLabel="Rivalry match">
+        <Text style={styles.derbyTxt}>🔥 {label}</Text>
+      </View>
+    );
+  };
+
   const statusBadge = (s?: string) => {
     if (!s || s === "none") return null;
     const isConf = s === "confirmed";
