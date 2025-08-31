@@ -773,7 +773,7 @@ async def submit_player_rating(match_id: str, body: Dict, current=Depends(get_us
         delta = 0
         for k in ["attack", "defense", "passing", "dribbling"]:
             diff = abs(doc[k] - av[k])
-            if diff &lt;= 2:
+            if diff <= 2:
                 delta += 1
             elif diff &gt; 3:
                 delta -= 1
