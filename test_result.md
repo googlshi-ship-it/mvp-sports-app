@@ -436,17 +436,14 @@ frontend:
         comment: "Displays tournament, teams, channels, allows like/dislike and shows voting results."
 metadata:
   created_by: "main_agent"
-  version: "1.1"
-  test_sequence: 2
+  version: "1.3"
+  test_sequence: 4
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Backend: Competitions + Lineups/Injuries features"
-    - "Backend: Admin overrides for lineups and injuries"
-    - "Backend: Timezone support in match endpoints"
-  stuck_tasks:
-    - "Matches grouped with timezone (existing endpoint compatibility)"
+    - "Backend smoke tests completed"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
