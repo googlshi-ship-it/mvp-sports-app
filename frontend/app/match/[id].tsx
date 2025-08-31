@@ -189,8 +189,32 @@ export default function MatchDetails() {
     );
   };
 
-  const onShare = () => {
-    toast("Share coming soon");
+  import { Share, Platform } from "react-native";
+import * as Clipboard from "expo-clipboard";
+
+  const onShare = async () => {
+    try {
+      const home = match?.homeTeam?.name || "Home";
+      const away = match?.awayTeam?.name || "Away";
+      const time = match?.start_time_local ? new Date(match.start_time_local).toLocaleString() : (match?.startTime ? new Date(match.startTime).toLocaleString() : "");
+      const url = typeof window !== "undefined" ? window.location.origin + `/match/${id}` : `https://example.com/match/${id}`;
+      const message = `${home} vs ${away} — ${time}. Join the vote: ${url}`;
+      if (Platform.OS === "web") {
+        // Web share
+        // @ts-ignore
+        if (navigator && navigator.share) {
+          // @ts-ignore
+          await navigator.share({ title: `${home} vs ${away}`, url, text: message });
+          return;
+        }
+        await Clipboard.setStringAsync(url);
+        toast("Link copied to clipboard");
+        return;
+      }
+      await Share.share({ message });
+    } catch (e) {
+      toast("Could not share");
+    }
   };
 
   return (
