@@ -84,8 +84,20 @@ class RateInput(BaseModel):
     like: bool
 
 
+# Extended categories per sport
+VoteCategory = Literal[
+    "mvp",
+    "scorer",
+    "assist",
+    "defender",
+    "goalkeeper",
+    "fight_of_the_night",
+    "performance_of_the_night",
+]
+
+
 class VoteInput(BaseModel):
-    category: Literal["mvp", "scorer", "assist", "defender"]
+    category: VoteCategory
     player: str
 
 
@@ -128,6 +140,16 @@ async def on_startup():
         await ensure_indexes()
     except Exception as e:
         logger.warning(f"Index ensure failed: {e}")
+
+
+def categories_for_sport(sport: str) -> List[str]:
+    if sport == "football":
+        return ["mvp", "scorer", "assist", "defender", "goalkeeper"]
+    if sport == "basketball":
+        return ["mvp", "scorer", "assist", "defender"]
+    if sport == "ufc":
+        return ["fight_of_the_night", "performance_of_the_night"]
+    return ["mvp"]
 
 
 # ---------------------------
@@ -250,6 +272,14 @@ async def vote_match(match_id: str, body: VoteInput):
         oid = ObjectId(match_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid match id")
+
+    match_doc = await db.matches.find_one({"_id": oid})
+    if not match_doc:
+        raise HTTPException(status_code=404, detail="Match not found")
+    allowed = categories_for_sport(match_doc.get("sport", ""))
+    if body.category not in allowed:
+        raise HTTPException(status_code=400, detail=f"Category '{body.category}' not allowed for this sport")
+
     path = f"votes.{body.category}.{body.player}"
     await db.votes.update_one({"matchId": oid}, {"$inc": {path: 1}}, upsert=True)
     doc = await db.votes.find_one({"matchId": oid})
@@ -259,7 +289,7 @@ async def vote_match(match_id: str, body: VoteInput):
         return {k: round(v * 100 / total, 1) for k, v in counter.items()}
 
     out = {}
-    for cat in ["mvp", "scorer", "assist", "defender"]:
+    for cat in allowed:
         out[cat] = to_pct(doc.get("votes", {}).get(cat, {}))
     return out
 
@@ -270,6 +300,12 @@ async def get_votes(match_id: str):
         oid = ObjectId(match_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid match id")
+
+    match_doc = await db.matches.find_one({"_id": oid})
+    if not match_doc:
+        raise HTTPException(status_code=404, detail="Match not found")
+    allowed = categories_for_sport(match_doc.get("sport", ""))
+
     doc = await db.votes.find_one({"matchId": oid}) or {}
 
     def to_pct(counter: Dict[str, int]):
@@ -277,7 +313,7 @@ async def get_votes(match_id: str):
         return {k: round(v * 100 / total, 1) for k, v in counter.items()}
 
     out = {}
-    for cat in ["mvp", "scorer", "assist", "defender"]:
+    for cat in allowed:
         out[cat] = to_pct(doc.get("votes", {}).get(cat, {}))
     return out
 

@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { apiGet, apiPost } from "../../src/api/client";
@@ -11,12 +11,40 @@ function sportIcon(sport?: string) {
   return <MaterialCommunityIcons name="boxing-glove" size={18} color="#ff4d6d" />;
 }
 
+const categoriesBySport: Record<string, { key: string; label: string }[]> = {
+  football: [
+    { key: "mvp", label: "MVP" },
+    { key: "scorer", label: "Best Scorer" },
+    { key: "assist", label: "Best Assist" },
+    { key: "defender", label: "Best Defender" },
+    { key: "goalkeeper", label: "Best Goalkeeper" },
+  ],
+  basketball: [
+    { key: "mvp", label: "MVP" },
+    { key: "scorer", label: "Best Scorer" },
+    { key: "assist", label: "Best Assist" },
+    { key: "defender", label: "Best Defender" },
+  ],
+  ufc: [
+    { key: "fight_of_the_night", label: "Fight of the Night" },
+    { key: "performance_of_the_night", label: "Performance of the Night" },
+  ],
+};
+
 export default function MatchDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [match, setMatch] = useState<any | null>(null);
   const [votes, setVotes] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const cats = useMemo(() => {
+    if (!match?.sport) return [];
+    return categoriesBySport[match.sport] || [];
+  }, [match?.sport]);
 
   useEffect(() => {
     const load = async () => {
@@ -34,6 +62,10 @@ export default function MatchDetails() {
     load();
   }, [id]);
 
+  useEffect(() => {
+    if (cats.length && !selectedCat) setSelectedCat(cats[0].key);
+  }, [cats, selectedCat]);
+
   const rate = async (like: boolean) => {
     try {
       await apiPost(`/api/matches/${id}/rate`, { like });
@@ -42,64 +74,121 @@ export default function MatchDetails() {
     }
   };
 
-  if (loading) return (
-    <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
-      <ActivityIndicator color="#9b8cff" />
-    </View>
-  );
+  const submitVote = async () => {
+    if (!selectedCat || !name.trim()) return;
+    setSubmitting(true);
+    try {
+      await apiPost(`/api/matches/${id}/vote`, { category: selectedCat, player: name.trim() });
+      const v = await apiGet(`/api/matches/${id}/votes`);
+      setVotes(v);
+      setName("");
+    } catch (e) {
+      console.warn(e);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-  if (!match) return (
-    <View style={styles.container}>
-      <Text style={{ color: "#fff", padding: 16 }}>Not found</Text>
-    </View>
-  );
+  if (loading)
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator color="#9b8cff" />
+      </View>
+    );
+
+  if (!match)
+    return (
+      <View style={styles.container}>
+        <Text style={{ color: "#fff", padding: 16 }}>Not found</Text>
+      </View>
+    );
 
   const kickoff = new Date(match.startTime).toLocaleString();
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
-      <View style={styles.header}>
-        {sportIcon(match.sport)}
-        <Text style={styles.headerTxt}>{match.tournament}</Text>
-        {match.subgroup ? <Text style={styles.subgroup}> · {match.subgroup}</Text> : null}
-      </View>
-
-      <BlurView intensity={40} tint="dark" style={styles.card}>
-        <Text style={styles.time}>{kickoff}</Text>
-        <View style={styles.teamsRow}>
-          <Text style={styles.team}>{match.homeTeam?.name}</Text>
-          <Text style={styles.vs}> — </Text>
-          <Text style={styles.team}>{match.awayTeam?.name}</Text>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 140 }}>
+        <View style={styles.header}>
+          {sportIcon(match.sport)}
+          <Text style={styles.headerTxt}>{match.tournament}</Text>
+          {match.subgroup ? <Text style={styles.subgroup}> · {match.subgroup}</Text> : null}
         </View>
-      </BlurView>
 
-      <BlurView intensity={30} tint="dark" style={styles.card}>
-        <Text style={styles.blockTitle}>Channels</Text>
-        <Text style={styles.channels}>Switzerland (CH): {(match.channels?.CH || []).join(", ")}</Text>
-      </BlurView>
+        <BlurView intensity={40} tint="dark" style={styles.card}>
+          <Text style={styles.time}>{kickoff}</Text>
+          <View style={styles.teamsRow}>
+            <Text style={styles.team}>{match.homeTeam?.name}</Text>
+            <Text style={styles.vs}> — </Text>
+            <Text style={styles.team}>{match.awayTeam?.name}</Text>
+          </View>
+        </BlurView>
 
-      <BlurView intensity={30} tint="dark" style={styles.card}>
-        <Text style={styles.blockTitle}>Rate the match</Text>
-        <View style={styles.row}>
-          <TouchableOpacity onPress={() => rate(true)} style={[styles.btn, { backgroundColor: "#1a2" }]}> 
-            <Ionicons name="thumbs-up-outline" size={18} color="#fff" />
-            <Text style={styles.btnTxt}>Like</Text>
+        <BlurView intensity={30} tint="dark" style={styles.card}>
+          <Text style={styles.blockTitle}>Channels</Text>
+          <Text style={styles.channels}>Switzerland (CH): {(match.channels?.CH || []).join(", ")}</Text>
+        </BlurView>
+
+        <BlurView intensity={30} tint="dark" style={styles.card}>
+          <Text style={styles.blockTitle}>Rate the match</Text>
+          <View style={styles.row}>
+            <TouchableOpacity onPress={() => rate(true)} style={[styles.btn, { backgroundColor: "#1a2" }]}> 
+              <Ionicons name="thumbs-up-outline" size={18} color="#fff" />
+              <Text style={styles.btnTxt}>Like</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => rate(false)} style={[styles.btn, { backgroundColor: "#a21" }]}> 
+              <Ionicons name="thumbs-down-outline" size={18} color="#fff" />
+              <Text style={styles.btnTxt}>Dislike</Text>
+            </TouchableOpacity>
+          </View>
+        </BlurView>
+
+        <BlurView intensity={30} tint="dark" style={styles.card}>
+          <Text style={styles.blockTitle}>Cast your vote</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
+            {cats.map((c) => (
+              <TouchableOpacity key={c.key} onPress={() => setSelectedCat(c.key)} style={[styles.chip, selectedCat === c.key && styles.chipActive]}>
+                <Text style={[styles.chipTxt, selectedCat === c.key && styles.chipTxtActive]}>{c.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <View style={{ height: 8 }} />
+          <TextInput
+            placeholder="Enter player/fighter name"
+            placeholderTextColor="#8a90a4"
+            value={name}
+            onChangeText={setName}
+            style={styles.input}
+            returnKeyType="send"
+            onSubmitEditing={submitVote}
+          />
+          <TouchableOpacity disabled={submitting || !name.trim()} onPress={submitVote} style={[styles.submit, (!name.trim() || submitting) && { opacity: 0.6 }]}> 
+            <Ionicons name="send-outline" size={18} color="#fff" />
+            <Text style={styles.btnTxt}>{submitting ? "Submitting..." : "Submit Vote"}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => rate(false)} style={[styles.btn, { backgroundColor: "#a21" }]}> 
-            <Ionicons name="thumbs-down-outline" size={18} color="#fff" />
-            <Text style={styles.btnTxt}>Dislike</Text>
-          </TouchableOpacity>
-        </View>
-      </BlurView>
+        </BlurView>
 
-      <BlurView intensity={30} tint="dark" style={styles.card}>
-        <Text style={styles.blockTitle}>Fan voting (results)</Text>
-        <Text style={styles.voteLine}>MVP: {JSON.stringify(votes?.mvp || {})}</Text>
-        <Text style={styles.voteLine}>Best Scorer: {JSON.stringify(votes?.scorer || {})}</Text>
-        <Text style={styles.voteLine}>Best Assist: {JSON.stringify(votes?.assist || {})}</Text>
-        <Text style={styles.voteLine}>Best Defender: {JSON.stringify(votes?.defender || {})}</Text>
-      </BlurView>
-    </ScrollView>
+        <BlurView intensity={30} tint="dark" style={styles.card}>
+          <Text style={styles.blockTitle}>Fan voting (results)</Text>
+          {Object.keys(votes || {}).length === 0 ? (
+            <Text style={styles.voteLine}>No votes yet</Text>
+          ) : (
+            Object.entries(votes || {}).map(([cat, entries]: any) => (
+              <View key={cat} style={{ marginTop: 10 }}>
+                <Text style={[styles.voteLine, { marginBottom: 6 }]}>{cat.replaceAll("_", " ")}</Text>
+                {Object.entries(entries as any).map(([player, pct]: any) => (
+                  <View key={player} style={styles.barRow}>
+                    <View style={styles.barBg}>
+                      <View style={[styles.bar, { width: `${pct}%` }]} />
+                    </View>
+                    <Text style={styles.barTxt}>{player} — {pct}%</Text>
+                  </View>
+                ))}
+              </View>
+            ))
+          )}
+        </BlurView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -119,4 +208,14 @@ const styles = StyleSheet.create({
   btn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12 },
   btnTxt: { color: "#fff", fontWeight: "700" },
   voteLine: { color: "#c7d1df", marginTop: 6 },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, marginRight: 8, borderRadius: 20, borderWidth: 1, borderColor: "#2a2a3c" },
+  chipActive: { backgroundColor: "#1f1b3a", borderColor: "#4a56e2" },
+  chipTxt: { color: "#c7d1df", fontSize: 13 },
+  chipTxtActive: { color: "#fff", fontWeight: "700" },
+  input: { backgroundColor: "#0f1220", color: "#fff", paddingHorizontal: 12, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: "#25273a" },
+  submit: { marginTop: 10, backgroundColor: "#4a56e2", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 12 },
+  barRow: { marginBottom: 8 },
+  barBg: { height: 8, backgroundColor: "#1b1f33", borderRadius: 6, overflow: "hidden" },
+  bar: { height: 8, backgroundColor: "#9b8cff" },
+  barTxt: { color: "#b9c4d6", fontSize: 12, marginTop: 4 },
 });
