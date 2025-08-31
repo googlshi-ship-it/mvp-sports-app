@@ -386,6 +386,8 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Added Competitions + Lineups/Injuries backend with tz handling and admin overrides; seeded demo data. Testing agent validated all new endpoints; one grouped tz issue fixed. User prefers manual frontend testing; we will proceed to implement frontend next upon confirmation."
+  - agent: "testing"
+    message: "✅ Re-test completed for GET /api/matches/grouped endpoint. Both requested scenarios now working perfectly: (1) GET /api/matches/grouped?tz=Europe/Madrid returns 200 with timezone-adjusted start_time_local fields, (2) GET /api/matches/grouped?country=CH returns 200 with proper channelsForCountry arrays. The ObjectId serialization issue has been resolved. Found 7 total matches across today/tomorrow/week buckets."
         comment: "❌ Minor issue: GET /api/matches/grouped?tz=Europe/Madrid returns 500 error due to ObjectId serialization in datetime comparison. Core functionality works but timezone parameter causes issues. Needs ObjectId/datetime serialization fix."
 frontend:
   - task: "Expo Router tabs + navigation"
