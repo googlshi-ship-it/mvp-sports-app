@@ -234,6 +234,9 @@ import * as Clipboard from "expo-clipboard";
         <View style={styles.header}>
           {sportIcon(match?.sport)}
           <Text style={styles.headerTxt}>{match?.tournament || "—"}</Text>
+          {RIVALRY_UI && match?.rivalry?.enabled ? (
+            <View style={styles.derbyChip}><Text style={styles.derbyTxt}>🔥 {match?.rivalry?.tag || "Derby"}</Text></View>
+          ) : null}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: "auto" }}>
             {queueCount !== null && <Text style={styles.queueChip}>Queue {queueCount}</Text>}
             <TouchableOpacity onPress={onShare} style={[styles.smallBtn, { paddingVertical: 6, paddingHorizontal: 8 }]}>
