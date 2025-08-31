@@ -35,7 +35,7 @@ class PyObjectId(ObjectId):
         yield cls.validate
 
     @classmethod
-    def validate(cls, v):
+    def validate(cls, v, validation_info=None):
         if isinstance(v, ObjectId):
             return v
         if not ObjectId.is_valid(v):
