@@ -105,7 +105,7 @@ def with_voting_status(m: Dict) -> Dict:
     }
 
 
-def to_local_iso(dt: datetime, tz: Optional[str]) -&gt; Optional[str]:
+def to_local_iso(dt: datetime, tz: Optional[str]) -> Optional[str]:
     if not dt:
         return None
     dt = to_utc(dt)
