@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, SectionList, RefreshControl, TouchableOpacity } from "react-native";
+import GlassCard from "../../src/components/GlassCard";
 import { useRouter } from "expo-router";
 import { BlurView } from "expo-blur";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
