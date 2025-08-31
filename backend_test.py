@@ -559,7 +559,7 @@ def find_rivalry_match():
             matches = response.json()
             print(f"   Found {len(matches)} total matches")
             
-            # Look for rivalry matches
+            # Look for rivalry matches first (enabled=true)
             rivalry_matches = []
             for match in matches:
                 rivalry = match.get("rivalry", {})
@@ -573,11 +573,12 @@ def find_rivalry_match():
                         "rivalry": rivalry
                     })
             
-            print(f"   Found {len(rivalry_matches)} rivalry matches:")
-            for rm in rivalry_matches:
-                print(f"     - {rm['home']} vs {rm['away']} (intensity: {rm['rivalry'].get('intensity', 0)})")
+            if rivalry_matches:
+                print(f"   Found {len(rivalry_matches)} enabled rivalry matches:")
+                for rm in rivalry_matches:
+                    print(f"     - {rm['home']} vs {rm['away']} (intensity: {rm['rivalry'].get('intensity', 0)})")
             
-            # Look for specific rivalry matches
+            # Look for target rivalry matches (Barcelona vs Real Madrid, Celtics vs Lakers)
             target_rivalries = [
                 ("Barcelona", "Real Madrid"),
                 ("Real Madrid", "Barcelona"),
@@ -585,19 +586,48 @@ def find_rivalry_match():
                 ("Los Angeles Lakers", "Boston Celtics")
             ]
             
+            # First check enabled rivalry matches
             for rm in rivalry_matches:
                 for home_target, away_target in target_rivalries:
                     if rm['home'] == home_target and rm['away'] == away_target:
-                        print(f"   ✅ Found target rivalry: {rm['home']} vs {rm['away']}")
+                        print(f"   ✅ Found enabled target rivalry: {rm['home']} vs {rm['away']}")
                         return rm['id'], rm
             
-            # If no specific target found, return first rivalry match
+            # If no enabled rivalry found, look for potential rivalry matches to enable
+            potential_matches = []
+            for match in matches:
+                home_team = match.get("homeTeam", {}).get("name", "")
+                away_team = match.get("awayTeam", {}).get("name", "")
+                for home_target, away_target in target_rivalries:
+                    if home_team == home_target and away_team == away_target:
+                        potential_matches.append({
+                            "id": match.get("_id") or match.get("id"),
+                            "home": home_team,
+                            "away": away_team,
+                            "rivalry": match.get("rivalry", {})
+                        })
+            
+            if potential_matches:
+                pm = potential_matches[0]
+                print(f"   ✅ Found potential rivalry match to enable: {pm['home']} vs {pm['away']}")
+                return pm['id'], pm
+            
+            # If no specific target found, return first rivalry match or first match
             if rivalry_matches:
                 rm = rivalry_matches[0]
-                print(f"   ✅ Using first rivalry match: {rm['home']} vs {rm['away']}")
+                print(f"   ✅ Using first enabled rivalry match: {rm['home']} vs {rm['away']}")
                 return rm['id'], rm
+            elif matches:
+                match = matches[0]
+                print(f"   ⚠️  No rivalry matches found, using first match for testing")
+                return match.get("_id") or match.get("id"), {
+                    "id": match.get("_id") or match.get("id"),
+                    "home": match.get("homeTeam", {}).get("name", ""),
+                    "away": match.get("awayTeam", {}).get("name", ""),
+                    "rivalry": match.get("rivalry", {})
+                }
             else:
-                print(f"   ❌ No rivalry matches found")
+                print(f"   ❌ No matches found")
                 return None, None
         else:
             print(f"   ❌ Expected 200, got {response.status_code}")
