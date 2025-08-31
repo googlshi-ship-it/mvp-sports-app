@@ -563,6 +563,8 @@ async def list_matches(country: Optional[str] = None, sport: Optional[Sport] = N
     out = []
     for item in items:
         item["_id"] = str(item["_id"])  # type: ignore
+        if "competition_id" in item and item["competition_id"]:
+            item["competition_id"] = str(item["competition_id"])  # type: ignore
         extra = with_voting_status(item)
         st = item.get("startTime")
         if isinstance(st, str):
