@@ -608,11 +608,14 @@ async def matches_grouped(country: Optional[str] = None, tz: Optional[str] = Non
         # Convert ObjectId fields to strings and datetime fields to ISO strings
         if "competition_id" in m and m["competition_id"]:
             m["competition_id"] = str(m["competition_id"])
+        # Ensure _id is string as well
+        m_id = str(m["_id"]) if isinstance(m.get("_id"), ObjectId) else m.get("_id")
+        m["_id"] = m_id
         # Convert datetime fields to ISO strings for JSON serialization
         for dt_field in ["lineups_updated_at", "injuries_updated_at"]:
             if dt_field in m and m[dt_field]:
                 m[dt_field] = m[dt_field].isoformat() if hasattr(m[dt_field], 'isoformat') else m[dt_field]
-        grouped[bucket].append({**m, "id": str(m["_id"]), "channelsForCountry": pick_channels(m), **extra, "start_time_local": st_local})
+        grouped[bucket].append({**m, "id": str(m_id), "channelsForCountry": pick_channels(m), **extra, "start_time_local": st_local})
     return grouped
 
 
