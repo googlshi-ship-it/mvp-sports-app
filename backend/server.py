@@ -725,7 +725,7 @@ async def vote_match(match_id: str, body: VoteInput, current=Depends(get_user_fr
             if pct:
                 max_pct = max(pct.values())
                 sel_pct = pct.get(body.player, 0)
-                delta = 1 if sel_pct &gt;= max_pct - 20 else -1
+                delta = 1 if sel_pct >= max_pct - 20 else -1
     if delta != 0:
         await update_user_score(current["_id"], delta)
     return {"percentages": out, "totals": totals}
