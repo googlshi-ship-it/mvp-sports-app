@@ -136,7 +136,7 @@ async def backfill_voting_windows():
 
 async def seed_competitions_and_matches():
     cnt = await db.competitions.count_documents({})
-    if cnt &gt; 0:
+    if cnt > 0:
         return
     # Seed competitions
     la_liga = {
