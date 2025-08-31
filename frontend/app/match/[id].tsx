@@ -1,9 +1,9 @@
 import { useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ToastAndroid, Alert } from "react-native";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ToastAndroid, Alert, RefreshControl, Modal } from "react-native";
 import { BlurView } from "expo-blur";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { apiGet, apiPost } from "../../src/api/client";
+import { apiGet, apiPost, apiPostAdmin } from "../../src/api/client";
 import { getRegisteredPushToken } from "../../src/notifications";
 import { useUIStore } from "../../src/store/ui";
 import { useRouter } from "expo-router";
@@ -39,6 +39,8 @@ const COUNTRIES = ["CH", "DE", "AT", "FR", "IT", "GB", "US", "GE", "ES", "GR"] a
 
 type CountryCode = typeof COUNTRIES[number];
 
+const ADMIN_ENABLED = (typeof __DEV__ !== "undefined" && __DEV__) || (process.env.EXPO_PUBLIC_ADMIN_DEBUG === "1");
+
 export default function MatchDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -46,6 +48,7 @@ export default function MatchDetails() {
   const [votesData, setVotesData] = useState<any | null>(null);
   const [rating, setRating] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -55,6 +58,7 @@ export default function MatchDetails() {
   const [queueCount, setQueueCount] = useState<number | null>(null);
   const [playerRatings, setPlayerRatings] = useState({ attack: 0, defense: 0, passing: 0, dribbling: 0 });
   const [playerAvg, setPlayerAvg] = useState<any | null>(null);
+  const [adminModal, setAdminModal] = useState<{ open: boolean; kind: "lineups" | "injuries" | null; json: string; token: string }>({ open: false, kind: null, json: "{}", token: "CHANGEME" });
   const reduceEffects = useUIStore((s) => s.reduceEffects);
   const token = useAuth((s) => s.token);
 
@@ -62,23 +66,31 @@ export default function MatchDetails() {
 
   const cats = useMemo(() => { if (!match?.sport) return []; return categoriesBySport[match.sport] || []; }, [match?.sport]);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const m = await apiGet(`/api/matches/${id}`);
-        setMatch(m);
-        const v = await apiGet(`/api/matches/${id}/votes`);
-        setVotesData(v);
-        const r = await apiGet(`/api/matches/${id}/rating`);
-        setRating(r);
-        const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`);
-        setQueueCount(qc?.pending ?? 0);
-      } catch (e) { console.warn(e); } finally { setLoading(false); }
-    };
-    load();
-  }, [id]);
+  const tz = useMemo(() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; } }, []);
 
-  useEffect(() => { if (cats.length && !selectedCat) setSelectedCat(cats[0].key); }, [cats, selectedCat]);
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const m = await apiGet(`/api/matches/${id}?include=lineups&tz=${encodeURIComponent(tz)}`);
+      setMatch(m);
+      const v = await apiGet(`/api/matches/${id}/votes`);
+      setVotesData(v);
+      const r = await apiGet(`/api/matches/${id}/rating`);
+      setRating(r);
+      const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`);
+      setQueueCount(qc?.pending ?? 0);
+    } catch (e: any) {
+      console.warn(e);
+      const msg = (e?.message || "").toString();
+      if (msg.includes("401")) toast("Login required");
+      else if (msg.includes("403")) toast("Not allowed at this time");
+      else toast("Failed to load match");
+    } finally { setLoading(false); setRefreshing(false); }
+  }, [id, tz]);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => { const c = cats; if (c.length && !selectedCat) setSelectedCat(c[0].key); }, [cats, selectedCat]);
 
   const requireAuth = () => {
     if (!token) {
@@ -89,13 +101,17 @@ export default function MatchDetails() {
     return true;
   };
 
-  const rate = async (like: boolean) => { if (!requireAuth()) return; try { const res = await apiPost(`/api/matches/${id}/rate`, { like }); setRating(res); } catch (e) { console.warn(e); } };
+  const onRefresh = () => { setRefreshing(true); load(); };
+
+  const rate = async (like: boolean) => { if (!requireAuth()) return; try { const res = await apiPost(`/api/matches/${id}/rate`, { like }); setRating(res); } catch (e: any) { const msg = (e?.message || "").toString(); if (msg.includes("403")) toast("Voting closed or not open yet"); else toast("Failed"); } };
 
   const submitVote = async () => {
     if (!requireAuth()) return;
     if (!selectedCat || !name.trim()) return;
     setSubmitting(true);
-    try { const tokenPush = getRegisteredPushToken(); const res = await apiPost(`/api/matches/${id}/vote`, { category: selectedCat, player: name.trim(), token: tokenPush }); setVotesData(res); setName(""); } catch (e) { console.warn(e); } finally { setSubmitting(false); }
+    try { const tokenPush = getRegisteredPushToken(); const res = await apiPost(`/api/matches/${id}/vote`, { category: selectedCat, player: name.trim(), token: tokenPush }); setVotesData(res); setName(""); }
+    catch (e: any) { const msg = (e?.message || "").toString(); if (msg.includes("403")) toast("Voting closed or not open yet"); else toast("Failed"); }
+    finally { setSubmitting(false); }
   };
 
   const scheduleVoteReminders = async () => { try { await apiPost(`/api/notifications/schedule_for_match`, { matchId: id }); setScheduled(true); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ?? 0); toast("Scheduled"); } catch (e) { console.warn(e); } };
@@ -119,19 +135,63 @@ export default function MatchDetails() {
   const kickoff = new Date(match.startTime).toLocaleString();
   const channels = (match.channels?.[country] as string[] | undefined) || [];
 
-  const StarRow = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => (
-    <View style={{ flexDirection: "row" }}>
-      {Array.from({ length: 10 }).map((_, i) => (
-        <TouchableOpacity key={i} onPress={() => onChange(i + 1)} style={{ padding: 4 }}>
-          <Ionicons name={i < value ? "star" : "star-outline"} size={18} color="#f5c242" />
-        </TouchableOpacity>
-      ))}
-    </View>
+  const lineups = match.lineups;
+  const updatedLineups = lineups?.lineups_updated_at ? new Date(lineups.lineups_updated_at) : null;
+  const updatedInjuries = lineups?.injuries_updated_at ? new Date(lineups.injuries_updated_at) : null;
+
+  const openAdmin = (kind: "lineups" | "injuries") => {
+    const current = kind === "lineups"
+      ? {
+          formation_home: match.formation_home || "",
+          formation_away: match.formation_away || "",
+          lineup_home: match.lineup_home || [],
+          lineup_away: match.lineup_away || [],
+          bench_home: match.bench_home || [],
+          bench_away: match.bench_away || [],
+          lineups_status: match.lineups_status || "none",
+        }
+      : {
+          unavailable_home: match.unavailable_home || [],
+          unavailable_away: match.unavailable_away || [],
+        };
+    setAdminModal({ open: true, kind, json: JSON.stringify(current, null, 2), token: "CHANGEME" });
+  };
+
+  const saveAdmin = async () => {
+    try {
+      const body = JSON.parse(adminModal.json || "{}");
+      if (!adminModal.kind) return;
+      if (adminModal.kind === "lineups") await apiPostAdmin(`/api/matches/${id}/lineups`, body, adminModal.token);
+      else await apiPostAdmin(`/api/matches/${id}/injuries`, body, adminModal.token);
+      setAdminModal({ ...adminModal, open: false });
+      await load();
+      toast("Updated");
+    } catch (e: any) {
+      const msg = (e?.message || "").toString();
+      if (msg.includes("401")) toast("Admin token required");
+      else toast("Invalid JSON or request failed");
+    }
+  };
+
+  const renderPerson = (p: any) => (
+    <Text style={styles.person} key={(p.playerId || p.name) + Math.random()}>
+      {p.number ? `${p.number} · ` : ""}{p.name}{p.pos ? ` · ${p.pos}` : ""}
+    </Text>
   );
+
+  const statusBadge = (s?: string) => {
+    if (!s || s === "none") return null;
+    const isConf = s === "confirmed";
+    return (
+      <View style={[styles.badge, { backgroundColor: isConf ? "#1f3a2b" : "#2f2a40" }]}>
+        <Text style={[styles.badgeTxt, { color: isConf ? "#95ffbf" : "#c7a2ff" }]}>{isConf ? "CONFIRMED" : "PROBABLE"}</Text>
+      </View>
+    );
+  };
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 260 }}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 260 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}>
         <View style={styles.header}>
           {sportIcon(match.sport)}
           <Text style={styles.headerTxt}>{match.tournament}</Text>
@@ -146,6 +206,75 @@ export default function MatchDetails() {
             <Text style={styles.vs}> — </Text>
             <Text style={styles.team}>{match.awayTeam?.name}</Text>
           </View>
+          {(match.stadium || match.venue) ? <Text style={styles.channels}>{match.stadium || match.venue}</Text> : null}
+        </Card>
+
+        {/* Lineups card */}
+        <Card {...cardProps} style={styles.card}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={styles.blockTitle}>Lineups</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              {statusBadge(lineups?.lineups_status)}
+              {updatedLineups && <Text style={styles.subtle}>Updated {updatedLineups.toLocaleTimeString()}</Text>}
+              {ADMIN_ENABLED && <TouchableOpacity onPress={() => openAdmin("lineups")} style={styles.smallBtn}><Ionicons name="create-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Edit JSON</Text></TouchableOpacity>}
+            </View>
+          </View>
+          {!!lineups?.formation_home || !!lineups?.formation_away ? (
+            <Text style={[styles.subtle, { marginTop: 4 }]}>{lineups?.formation_home || "—"} vs {lineups?.formation_away || "—"}</Text>
+          ) : null}
+          {!lineups || (!lineups.home?.starters?.length && !lineups.away?.starters?.length && !lineups.home?.bench?.length && !lineups.away?.bench?.length) ? (
+            <Text style={styles.voteLine}>No lineups yet</Text>
+          ) : (
+            <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Home — Starters</Text>
+                {(lineups.home?.starters || []).map(renderPerson)}
+                <Text style={[styles.sectionTitle, { marginTop: 8 }]}>Bench</Text>
+                {(lineups.home?.bench || []).map(renderPerson)}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Away — Starters</Text>
+                {(lineups.away?.starters || []).map(renderPerson)}
+                <Text style={[styles.sectionTitle, { marginTop: 8 }]}>Bench</Text>
+                {(lineups.away?.bench || []).map(renderPerson)}
+              </View>
+            </View>
+          )}
+        </Card>
+
+        {/* Unavailable card */}
+        <Card {...cardProps} style={styles.card}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={styles.blockTitle}>Unavailable</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              {updatedInjuries && <Text style={styles.subtle}>Updated {updatedInjuries.toLocaleTimeString()}</Text>}
+              {ADMIN_ENABLED && <TouchableOpacity onPress={() => openAdmin("injuries")} style={styles.smallBtn}><Ionicons name="create-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Edit JSON</Text></TouchableOpacity>}
+            </View>
+          </View>
+          {!lineups || ((!lineups.home?.unavailable || lineups.home.unavailable.length === 0) && (!lineups.away?.unavailable || lineups.away.unavailable.length === 0)) ? (
+            <Text style={styles.voteLine}>No injuries/suspensions reported</Text>
+          ) : (
+            <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Home</Text>
+                {(lineups.home?.unavailable || []).map((p: any) => (
+                  <View key={(p.playerId || p.name) + Math.random()} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <StatusChip status={p.status} />
+                    <Text style={styles.person}>{p.name}{p.reason ? ` — ${p.reason}` : ""}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Away</Text>
+                {(lineups.away?.unavailable || []).map((p: any) => (
+                  <View key={(p.playerId || p.name) + Math.random()} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <StatusChip status={p.status} />
+                    <Text style={styles.person}>{p.name}{p.reason ? ` — ${p.reason}` : ""}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </Card>
 
         <Card {...cardProps} style={styles.card}>
@@ -239,8 +368,44 @@ export default function MatchDetails() {
           )}
         </Card>
       </ScrollView>
+
+      {/* Admin JSON Modal */}
+      <Modal visible={adminModal.open} animationType="slide" onRequestClose={() => setAdminModal({ ...adminModal, open: false })}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+          <ScrollView style={{ flex: 1, backgroundColor: "#0a0a0f" }} contentContainerStyle={{ padding: 16 }}>
+            <Text style={{ color: "#fff", fontSize: 18, fontWeight: "800", marginBottom: 12 }}>Edit {adminModal.kind} JSON</Text>
+            <Text style={{ color: "#c7d1df", marginBottom: 8 }}>X-Admin-Token</Text>
+            <TextInput value={adminModal.token} onChangeText={(t) => setAdminModal({ ...adminModal, token: t })} style={[styles.input, { marginBottom: 10 }]} placeholder="CHANGEME" placeholderTextColor="#8a90a4" />
+            <TextInput value={adminModal.json} onChangeText={(t) => setAdminModal({ ...adminModal, json: t })} style={[styles.input, { minHeight: 240, textAlignVertical: "top" }]} multiline placeholder="{}" placeholderTextColor="#8a90a4" />
+            <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
+              <TouchableOpacity onPress={() => setAdminModal({ ...adminModal, open: false })} style={[styles.smallBtn, { backgroundColor: "#333" }]}><Text style={styles.smallBtnTxt}>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity onPress={saveAdmin} style={styles.smallBtn}><Ionicons name="save-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Save</Text></TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
     </KeyboardAvoidingView>
   );
+}
+
+const StarRow = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => (
+  <View style={{ flexDirection: "row" }}>
+    {Array.from({ length: 10 }).map((_, i) => (
+      <TouchableOpacity key={i} onPress={() => onChange(i + 1)} style={{ padding: 4 }}>
+        <Ionicons name={i < value ? "star" : "star-outline"} size={18} color="#f5c242" />
+      </TouchableOpacity>
+    ))}
+  </View>
+);
+
+function StatusChip({ status }: { status?: string }) {
+  const map: any = {
+    out: { bg: "#3a1f1f", color: "#ff9b9b", label: "Out" },
+    doubtful: { bg: "#3a331f", color: "#ffd59b", label: "Doubtful" },
+    recovery: { bg: "#1f3a2b", color: "#95ffbf", label: "Recovery" },
+  };
+  const st = status && map[status] ? map[status] : { bg: "#262b3a", color: "#c7d1df", label: status || "Status" };
+  return (<View style={[styles.badge, { backgroundColor: st.bg }]}><Text style={[styles.badgeTxt, { color: st.color }]}>{st.label}</Text></View>);
 }
 
 const styles = StyleSheet.create({
@@ -280,4 +445,8 @@ const styles = StyleSheet.create({
   smallBtnTxt: { color: "#fff", fontWeight: "700" },
   ratingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 },
   ratingLabel: { color: "#c7d1df", width: 120 },
+  person: { color: "#d6deea", marginBottom: 4 },
+  sectionTitle: { color: "#9aa3b2", fontWeight: "700" },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  badgeTxt: { fontWeight: "800", fontSize: 12 },
 });
