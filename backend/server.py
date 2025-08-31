@@ -142,6 +142,7 @@ async def ensure_indexes():
     await db.notifications.create_index([("matchId", 1), ("token", 1), ("type", 1)], unique=True)
     await db.device_votes.create_index([("matchId", 1), ("token", 1)], unique=True)
     await db.dispatch_logs.create_index([("ts", -1)])
+    await db.player_ratings.create_index([("matchId", 1), ("token", 1), ("player", 1)], unique=True)
 
 
 @app.on_event("startup")
@@ -371,6 +372,85 @@ async def get_votes(match_id: str):
     return {"percentages": out, "totals": totals}
 
 
+# -------- Player Ratings (Football) --------
+class PlayerRatingInput(BaseModel):
+    token: Optional[str] = None
+    player: str
+    attack: int
+    defense: int
+    passing: int
+    dribbling: int
+
+
+def _clamp10(x: int) -> int:
+    try:
+        x = int(x)
+    except Exception:
+        x = 0
+    return max(0, min(10, x))
+
+
+@api_router.post("/matches/{match_id}/player_ratings")
+async def submit_player_rating(match_id: str, body: PlayerRatingInput):
+    try:
+        oid = ObjectId(match_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    m = await db.matches.find_one({"_id": oid})
+    if not m:
+        raise HTTPException(status_code=404, detail="Match not found")
+    if m.get("sport") != "football":
+        raise HTTPException(status_code=400, detail="Player ratings only for football matches")
+
+    doc = {
+        "matchId": oid,
+        "player": body.player.strip(),
+        "attack": _clamp10(body.attack),
+        "defense": _clamp10(body.defense),
+        "passing": _clamp10(body.passing),
+        "dribbling": _clamp10(body.dribbling),
+        "updatedAt": datetime.utcnow(),
+    }
+    if body.token:
+        doc["token"] = body.token
+    # Upsert by (matchId, token, player) if token provided, else insert many per anonymous? Use token for idempotency.
+    if body.token:
+        await db.player_ratings.update_one(
+            {"matchId": oid, "token": body.token, "player": doc["player"]},
+            {"$set": doc},
+            upsert=True,
+        )
+    else:
+        await db.player_ratings.insert_one(doc)
+
+    return await _player_rating_aggregate(oid, doc["player"]) 
+
+
+async def _player_rating_aggregate(oid: ObjectId, player: str):
+    cur = db.player_ratings.find({"matchId": oid, "player": player})
+    acc = {"attack": 0, "defense": 0, "passing": 0, "dribbling": 0, "count": 0}
+    async for r in cur:
+        acc["attack"] += r.get("attack", 0)
+        acc["defense"] += r.get("defense", 0)
+        acc["passing"] += r.get("passing", 0)
+        acc["dribbling"] += r.get("dribbling", 0)
+        acc["count"] += 1
+    if acc["count"] == 0:
+        return {"count": 0, "averages": {"attack": 0, "defense": 0, "passing": 0, "dribbling": 0}, "overall": 0}
+    av = {k: round(acc[k] / acc["count"], 2) for k in ["attack", "defense", "passing", "dribbling"]}
+    overall = round((av["attack"] + av["defense"] + av["passing"] + av["dribbling"]) / 4, 2)
+    return {"count": acc["count"], "averages": av, "overall": overall}
+
+
+@api_router.get("/matches/{match_id}/player_ratings")
+async def get_player_rating(match_id: str, player: str):
+    try:
+        oid = ObjectId(match_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    return await _player_rating_aggregate(oid, player.strip())
+
+
 class PushRegister(BaseModel):
     token: str
     platform: Literal['ios', 'android', 'web']
@@ -454,6 +534,16 @@ async def _schedule_for_match_oid(oid: ObjectId):
             await db.notifications.insert_one(n)
 
 
+@api_router.get("/notifications/queue_count")
+async def queue_count(matchId: str):
+    try:
+        oid = ObjectId(matchId)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    pending = await db.notifications.count_documents({"matchId": oid, "status": "pending"})
+    return {"pending": pending}
+
+
 @api_router.post("/notifications/schedule_for_match")
 async def schedule_for_match(body: ScheduleRequest):
     try:
@@ -476,9 +566,7 @@ async def reschedule_match(body: ScheduleRequest):
         oid = ObjectId(body.matchId)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid match id")
-    # Cancel current pending
     await db.notifications.update_many({"matchId": oid, "status": "pending"}, {"$set": {"status": "canceled", "updatedAt": datetime.utcnow()}})
-    # Schedule fresh
     await _schedule_for_match_oid(oid)
     return {"ok": True}
 
@@ -491,6 +579,36 @@ async def cancel_match(body: ScheduleRequest):
         raise HTTPException(status_code=400, detail="Invalid match id")
     await db.notifications.update_many({"matchId": oid, "status": "pending"}, {"$set": {"status": "canceled", "updatedAt": datetime.utcnow()}})
     return {"ok": True}
+
+
+@api_router.post("/notifications/notify_test_audience")
+async def notify_test_audience(body: ScheduleRequest):
+    try:
+        oid = ObjectId(body.matchId)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    mdoc = await db.matches.find_one({"_id": oid})
+    if not mdoc:
+        raise HTTPException(status_code=404, detail="Match not found")
+    tokens = await db.push_tokens.find({"remind12h": True}).to_list(10000)
+    if not tokens:
+        return {"sent": 0}
+    msgs = []
+    for t in tokens:
+        msgs.append({
+            "to": t["token"],
+            "sound": "default",
+            "title": "MVP",
+            "body": f"Test audience: Vote for MVP for {mdoc.get('homeTeam',{}).get('name','Home')} – {mdoc.get('awayTeam',{}).get('name','Away')}",
+            "data": {"matchId": str(oid), "type": "test_audience"},
+        })
+    try:
+        _ = requests.post("https://exp.host/--/api/v2/push/send", json=msgs, timeout=20, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        await db.dispatch_logs.insert_one({"ts": datetime.now(timezone.utc).isoformat(), "sent": len(msgs), "skipped_voted": 0, "errors": 0, "durationMs": 0, "lastError": None, "kind": "test_audience"})
+        return {"sent": len(msgs)}
+    except Exception as e:
+        await db.dispatch_logs.insert_one({"ts": datetime.now(timezone.utc).isoformat(), "sent": 0, "skipped_voted": 0, "errors": len(msgs), "durationMs": 0, "lastError": str(e), "kind": "test_audience"})
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @api_router.post("/notifications/schedule_for_next_48h")
@@ -525,7 +643,6 @@ async def simulate_finish_now(body: ScheduleRequest):
         raise HTTPException(status_code=400, detail="Invalid match id")
     await _schedule_for_match_oid(oid)
     now = datetime.now(timezone.utc)
-    # Make due immediately
     await db.notifications.update_many({"matchId": oid, "type": {"$in": ["final", "12h"]}}, {"$set": {"deliverAt": now, "updatedAt": now}})
     return {"ok": True}
 
@@ -624,7 +741,6 @@ async def _dispatch_now_internal():
     now = start
     pending = await db.notifications.find({"deliverAt": {"$lte": now}, "status": "pending"}).to_list(10000)
     if not pending:
-        # Still log empty tick
         await db.dispatch_logs.insert_one({"ts": start.isoformat(), "sent": 0, "skipped_voted": 0, "errors": 0, "durationMs": 0})
         return 0
 

@@ -33,7 +33,7 @@ const categoriesBySport: Record<string, { key: string; label: string }[]> = {
   ],
 };
 
-const COUNTRIES = ["CH", "DE", "AT", "FR", "IT", "GB", "US"] as const;
+const COUNTRIES = ["CH", "DE", "AT", "FR", "IT", "GB", "US", "GE", "ES", "GR"] as const;
 
 type CountryCode = typeof COUNTRIES[number];
 
@@ -50,14 +50,14 @@ export default function MatchDetails() {
   const [countryOpen, setCountryOpen] = useState(false);
   const [country, setCountry] = useState<CountryCode>("CH");
   const [scheduled, setScheduled] = useState(false);
+  const [queueCount, setQueueCount] = useState<number | null>(null);
+  const [playerRatings, setPlayerRatings] = useState({ attack: 0, defense: 0, passing: 0, dribbling: 0 });
+  const [playerAvg, setPlayerAvg] = useState<any | null>(null);
   const reduceEffects = useUIStore((s) => s.reduceEffects);
 
   const toast = (m: string) => { if (Platform.OS === "android") ToastAndroid.show(m, ToastAndroid.SHORT); else Alert.alert(m); };
 
-  const cats = useMemo(() => {
-    if (!match?.sport) return [];
-    return categoriesBySport[match.sport] || [];
-  }, [match?.sport]);
+  const cats = useMemo(() => { if (!match?.sport) return []; return categoriesBySport[match.sport] || []; }, [match?.sport]);
 
   useEffect(() => {
     const load = async () => {
@@ -68,84 +68,65 @@ export default function MatchDetails() {
         setVotesData(v);
         const r = await apiGet(`/api/matches/${id}/rating`);
         setRating(r);
-      } catch (e) {
-        console.warn(e);
-      } finally {
-        setLoading(false);
-      }
+        const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`);
+        setQueueCount(qc?.pending ?? 0);
+      } catch (e) { console.warn(e); } finally { setLoading(false); }
     };
     load();
   }, [id]);
 
-  useEffect(() => {
-    if (cats.length && !selectedCat) setSelectedCat(cats[0].key);
-  }, [cats, selectedCat]);
+  useEffect(() => { if (cats.length && !selectedCat) setSelectedCat(cats[0].key); }, [cats, selectedCat]);
 
-  const rate = async (like: boolean) => {
-    try {
-      const res = await apiPost(`/api/matches/${id}/rate`, { like });
-      setRating(res);
-    } catch (e) {
-      console.warn(e);
-    }
-  };
+  const rate = async (like: boolean) => { try { const res = await apiPost(`/api/matches/${id}/rate`, { like }); setRating(res); } catch (e) { console.warn(e); } };
 
   const submitVote = async () => {
     if (!selectedCat || !name.trim()) return;
     setSubmitting(true);
+    try { const token = getRegisteredPushToken(); const res = await apiPost(`/api/matches/${id}/vote`, { category: selectedCat, player: name.trim(), token }); setVotesData(res); setName(""); } catch (e) { console.warn(e); } finally { setSubmitting(false); }
+  };
+
+  const scheduleVoteReminders = async () => { try { await apiPost(`/api/notifications/schedule_for_match`, { matchId: id }); setScheduled(true); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ?? 0); toast("Scheduled"); } catch (e) { console.warn(e); } };
+  const rescheduleReminders = async () => { try { await apiPost(`/api/notifications/reschedule_match`, { matchId: id }); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ?? 0); toast("Rescheduled"); } catch (e) { console.warn(e); } };
+  const cancelReminders = async () => { try { await apiPost(`/api/notifications/cancel_match`, { matchId: id }); const qc = await apiGet(`/api/notifications/queue_count?matchId=${id}`); setQueueCount(qc?.pending ?? 0); toast("Canceled"); } catch (e) { console.warn(e); } };
+  const simulateFinish = async () => { try { await apiPost(`/api/notifications/simulate_finish_now`, { matchId: id }); toast("Simulated finish; dispatch will send now"); } catch (e) { console.warn(e); } };
+  const notifyTestAudience = async () => { try { const res = await apiPost(`/api/notifications/notify_test_audience`, { matchId: id }); toast(`Sent: ${res.sent}`); } catch (e) { console.warn(e); } };
+
+  const submitPlayerRatings = async () => {
+    if (!name.trim()) return toast("Enter player name");
     try {
       const token = getRegisteredPushToken();
-      const res = await apiPost(`/api/matches/${id}/vote`, { category: selectedCat, player: name.trim(), token });
-      setVotesData(res);
-      setName("");
-    } catch (e) {
-      console.warn(e);
-    } finally {
-      setSubmitting(false);
-    }
+      const res = await apiPost(`/api/matches/${id}/player_ratings`, { token, player: name.trim(), ...playerRatings });
+      setPlayerAvg(res);
+      toast("Submitted");
+    } catch (e) { console.warn(e); }
   };
 
-  const scheduleVoteReminders = async () => {
-    try { await apiPost(`/api/notifications/schedule_for_match`, { matchId: id }); setScheduled(true); toast("Scheduled"); } catch (e) { console.warn(e); }
-  };
-
-  const rescheduleReminders = async () => {
-    try { await apiPost(`/api/notifications/reschedule_match`, { matchId: id }); toast("Rescheduled"); } catch (e) { console.warn(e); }
-  };
-
-  const cancelReminders = async () => {
-    try { await apiPost(`/api/notifications/cancel_match`, { matchId: id }); toast("Canceled"); } catch (e) { console.warn(e); }
-  };
-
-  const simulateFinish = async () => {
-    try { await apiPost(`/api/notifications/simulate_finish_now`, { matchId: id }); toast("Simulated finish; dispatch will send now"); } catch (e) { console.warn(e); }
-  };
-
-  if (loading)
-    return (
-      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
-        <ActivityIndicator color="#9b8cff" />
-      </View>
-    );
-
-  if (!match)
-    return (
-      <View style={styles.container}>
-        <Text style={{ color: "#fff", padding: 16 }}>Not found</Text>
-      </View>
-    );
-
-  const kickoff = new Date(match.startTime).toLocaleString();
-  const channels = (match.channels?.[country] as string[] | undefined) || [];
   const Card: any = reduceEffects ? View : BlurView;
   const cardProps: any = reduceEffects ? {} : { intensity: 30, tint: "dark" };
 
+  if (loading) return (<View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}><ActivityIndicator color="#9b8cff" /></View>);
+  if (!match) return (<View style={styles.container}><Text style={{ color: "#fff", padding: 16 }}>Not found</Text></View>);
+
+  const kickoff = new Date(match.startTime).toLocaleString();
+  const channels = (match.channels?.[country] as string[] | undefined) || [];
+
+  const StarRow = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => (
+    <View style={{ flexDirection: "row" }}>
+      {Array.from({ length: 10 }).map((_, i) => (
+        <TouchableOpacity key={i} onPress={() => onChange(i + 1)} style={{ padding: 4 }}>
+          <Ionicons name={i < value ? "star" : "star-outline"} size={18} color="#f5c242" />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 200 }}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 260 }}>
         <View style={styles.header}>
           {sportIcon(match.sport)}
           <Text style={styles.headerTxt}>{match.tournament}</Text>
+          {queueCount !== null && <Text style={styles.queueChip}>Queue {queueCount}</Text>}
           {match.subgroup ? <Text style={styles.subgroup}> · {match.subgroup}</Text> : null}
         </View>
 
@@ -183,14 +164,8 @@ export default function MatchDetails() {
         <Card {...cardProps} style={styles.card}>
           <Text style={styles.blockTitle}>Rate the match</Text>
           <View style={styles.row}>
-            <TouchableOpacity onPress={() => rate(true)} style={[styles.btn, { backgroundColor: "#1a2" }]}> 
-              <Ionicons name="thumbs-up-outline" size={18} color="#fff" />
-              <Text style={styles.btnTxt}>Like</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => rate(false)} style={[styles.btn, { backgroundColor: "#a21" }]}> 
-              <Ionicons name="thumbs-down-outline" size={18} color="#fff" />
-              <Text style={styles.btnTxt}>Dislike</Text>
-            </TouchableOpacity>
+            <TouchableOpacity onPress={() => rate(true)} style={[styles.btn, { backgroundColor: "#1a2" }]}><Ionicons name="thumbs-up-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Like</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => rate(false)} style={[styles.btn, { backgroundColor: "#a21" }]}><Ionicons name="thumbs-down-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Dislike</Text></TouchableOpacity>
           </View>
           {!!rating && <Text style={styles.voteLine}>Likes: {rating.likes} • Dislikes: {rating.dislikes} • {rating.likePct}% 👍</Text>}
         </Card>
@@ -204,6 +179,7 @@ export default function MatchDetails() {
               <TouchableOpacity onPress={rescheduleReminders} style={styles.smallBtn}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Reschedule</Text></TouchableOpacity>
               <TouchableOpacity onPress={cancelReminders} style={styles.smallBtn}><Ionicons name="close-circle-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity onPress={simulateFinish} style={styles.smallBtn}><Ionicons name="fast-forward-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Simulate finish</Text></TouchableOpacity>
+              <TouchableOpacity onPress={notifyTestAudience} style={styles.smallBtn}><Ionicons name="megaphone-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Notify test audience</Text></TouchableOpacity>
             </View>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
@@ -214,20 +190,26 @@ export default function MatchDetails() {
             ))}
           </ScrollView>
           <View style={{ height: 8 }} />
-          <TextInput
-            placeholder="Enter player/fighter name"
-            placeholderTextColor="#8a90a4"
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-            returnKeyType="send"
-            onSubmitEditing={submitVote}
-          />
-          <TouchableOpacity disabled={submitting || !name.trim()} onPress={submitVote} style={[styles.submit, (!name.trim() || submitting) && { opacity: 0.6 }]}> 
-            <Ionicons name="send-outline" size={18} color="#fff" />
-            <Text style={styles.btnTxt}>{submitting ? "Submitting..." : "Submit Vote"}</Text>
-          </TouchableOpacity>
+          <TextInput placeholder="Player/fighter name" placeholderTextColor="#8a90a4" value={name} onChangeText={setName} style={styles.input} returnKeyType="send" onSubmitEditing={submitVote} />
+          <TouchableOpacity disabled={submitting || !name.trim()} onPress={submitVote} style={[styles.submit, (!name.trim() || submitting) && { opacity: 0.6 }]}><Ionicons name="send-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>{submitting ? "Submitting..." : "Submit Vote"}</Text></TouchableOpacity>
         </Card>
+
+        {match.sport === "football" && (
+          <Card {...cardProps} style={styles.card}>
+            <Text style={styles.blockTitle}>Player star ratings (10⭐ each)</Text>
+            <Text style={styles.voteLine}>Rate: {name || "(enter player name above)"}</Text>
+            <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Attack</Text><StarRow value={playerRatings.attack} onChange={(v) => setPlayerRatings((s) => ({ ...s, attack: v }))} /></View>
+            <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Defense</Text><StarRow value={playerRatings.defense} onChange={(v) => setPlayerRatings((s) => ({ ...s, defense: v }))} /></View>
+            <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Passing</Text><StarRow value={playerRatings.passing} onChange={(v) => setPlayerRatings((s) => ({ ...s, passing: v }))} /></View>
+            <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Dribbling</Text><StarRow value={playerRatings.dribbling} onChange={(v) => setPlayerRatings((s) => ({ ...s, dribbling: v }))} /></View>
+            <TouchableOpacity onPress={submitPlayerRatings} style={styles.submit}><Ionicons name="save-outline" size={18} color="#fff" /><Text style={styles.smallBtnTxt}>Submit Ratings</Text></TouchableOpacity>
+            {playerAvg && (
+              <View style={{ marginTop: 10 }}>
+                <Text style={styles.voteLine}>Community averages (n={playerAvg.count}): A {playerAvg.averages.attack} • D {playerAvg.averages.defense} • P {playerAvg.averages.passing} • Dr {playerAvg.averages.dribbling} • Overall {playerAvg.overall}</Text>
+              </View>
+            )}
+          </Card>
+        )}
 
         <Card {...cardProps} style={styles.card}>
           <Text style={styles.blockTitle}>Fan voting (results)</Text>
@@ -239,9 +221,7 @@ export default function MatchDetails() {
                 <Text style={[styles.voteLine, { marginBottom: 6 }]}>{cat.replaceAll("_", " ")} • total {votesData.totals?.[cat] ?? 0}</Text>
                 {Object.entries(entries as any).map(([player, pct]: any) => (
                   <View key={player} style={styles.barRow}>
-                    <View style={styles.barBg}>
-                      <View style={[styles.bar, { width: `${pct}%` }]} />
-                    </View>
+                    <View style={styles.barBg}><View style={[styles.bar, { width: `${pct}%` }]} /></View>
                     <Text style={styles.barTxt}>{player} — {pct}%</Text>
                   </View>
                 ))}
@@ -256,8 +236,9 @@ export default function MatchDetails() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0a0a0f" },
-  header: { flexDirection: "row", alignItems: "center", padding: 16, gap: 8 },
+  header: { flexDirection: "row", alignItems: "center", padding: 16, gap: 8, flexWrap: "wrap" },
   headerTxt: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  queueChip: { color: "#fff", backgroundColor: "#1f1b3a", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, overflow: "hidden", fontSize: 12 },
   subtle: { color: "#9aa3b2", fontSize: 12 },
   subgroup: { color: "#9aa3b2", fontSize: 14 },
   card: { marginHorizontal: 16, marginBottom: 12, padding: 16, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
@@ -288,4 +269,6 @@ const styles = StyleSheet.create({
   countryItemTxt: { color: "#c7d1df" },
   smallBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#1f1b3a", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12 },
   smallBtnTxt: { color: "#fff", fontWeight: "700" },
+  ratingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 },
+  ratingLabel: { color: "#c7d1df", width: 120 },
 });

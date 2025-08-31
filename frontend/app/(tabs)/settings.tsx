@@ -4,6 +4,8 @@ import { registerForPushNotificationsAsync, getRegisteredPushToken, sendLocalTes
 import { apiGet, apiPost } from "../../src/api/client";
 import { useUIStore } from "../../src/store/ui";
 
+const ADMIN_ENABLED = (typeof __DEV__ !== "undefined" && __DEV__) || (process.env.EXPO_PUBLIC_ADMIN_DEBUG === "1");
+
 export default function SettingsScreen() {
   const [r7, setR7] = useState(true);
   const [r1d, setR1d] = useState(true);
@@ -16,89 +18,27 @@ export default function SettingsScreen() {
   const [hours, setHours] = useState("48");
   const [stats, setStats] = useState<any | null>(null);
   const [pendingList, setPendingList] = useState<any[] | null>(null);
-  const tz = useMemo(() => {
-    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; }
-  }, []);
-  const locale = useMemo(() => {
-    try { return Intl.DateTimeFormat().resolvedOptions().locale || "en"; } catch { return "en"; }
-  }, []);
+  const tz = useMemo(() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; } }, []);
+  const locale = useMemo(() => { try { return Intl.DateTimeFormat().resolvedOptions().locale || "en"; } catch { return "en"; } }, []);
 
   const reduceEffects = useUIStore((s) => s.reduceEffects);
   const setReduceEffects = useUIStore((s) => s.setReduceEffects);
 
-  const toast = (msg: string) => {
-    if (Platform.OS === "android") ToastAndroid.show(msg, ToastAndroid.SHORT); else Alert.alert(msg);
-  };
+  const toast = (msg: string) => { if (Platform.OS === "android") ToastAndroid.show(msg, ToastAndroid.SHORT); else Alert.alert(msg); };
 
-  useEffect(() => {
-    const existing = getRegisteredPushToken();
-    if (existing) setPushToken(existing);
-    refreshStats();
-  }, []);
+  useEffect(() => { const existing = getRegisteredPushToken(); if (existing) setPushToken(existing); refreshStats(); }, []);
 
-  const refreshStats = async () => {
-    try {
-      const s = await apiGet("/api/notifications/stats");
-      setStats(s);
-    } catch (e) {}
-  };
+  const refreshStats = async () => { try { const s = await apiGet("/api/notifications/stats"); setStats(s); } catch (e) {} };
 
-  const enablePush = async () => {
-    try {
-      const token = await registerForPushNotificationsAsync(country, remind12h);
-      setPushToken(token);
-      toast("Push enabled");
-    } catch (e: any) {
-      Alert.alert("Notifications", e?.message || "Failed to enable push");
-    }
-  };
-
-  const reRegister = async () => {
-    try {
-      const token = await registerForPushNotificationsAsync(country, remind12h);
-      setPushToken(token);
-      toast("Re-registered");
-    } catch (e: any) {
-      Alert.alert("Notifications", e?.message || "Failed to re-register");
-    }
-  };
-
-  const onToggle12h = async (val: boolean) => {
-    setRemind12h(val);
-    try { if (pushToken) await registerForPushNotificationsAsync(country, val); } catch {}
-  };
-
-  const sendTestPush = async () => {
-    try {
-      const token = pushToken || getRegisteredPushToken();
-      if (!token) return Alert.alert("Enable Push first");
-      await apiPost("/api/notifications/test_push", { token, body: "Test push from MVP" });
-      toast("Test push requested");
-    } catch (e: any) {
-      Alert.alert("Failed", e?.message || "Error");
-    }
-  };
-
-  const dispatchNow = async () => {
-    try { const res = await apiPost("/api/notifications/dispatch_now"); toast(`Dispatched: ${res.sent}`); refreshStats(); } catch (e: any) { Alert.alert("Failed", e?.message || "Error"); }
-  };
-
-  const scheduleAll48h = async () => {
-    try { const res = await apiPost("/api/notifications/schedule_for_next_48h"); toast(`Scheduled: ${res.count}`); refreshStats(); } catch (e: any) { Alert.alert("Failed", e?.message || "Error"); }
-  };
-
-  const scheduleHours = async () => {
-    try { const h = parseInt(hours || "0"); const res = await apiPost("/api/notifications/schedule_for_next_hours", { hours: h }); toast(`Scheduled: ${res.count}`); refreshStats(); } catch (e: any) { Alert.alert("Failed", e?.message || "Error"); }
-  };
-
-  const viewPending = async () => {
-    try { const list = await apiGet("/api/notifications/pending?limit=50"); setPendingList(list); } catch (e: any) { Alert.alert("Failed", e?.message || "Error"); }
-  };
-
-  const exportLogs = async () => {
-    try { const csv = await fetch((process.env.EXPO_PUBLIC_BACKEND_URL || "") + "/api/notifications/logs.csv").then((r) => r.text()); Alert.alert("Logs CSV", csv.slice(0, 500) + (csv.length > 500 ? "..." : "")); } catch (e: any) { Alert.alert("Failed", e?.message || "Error"); }
-  };
-
+  const enablePush = async () => { try { const token = await registerForPushNotificationsAsync(country, remind12h); setPushToken(token); toast("Push enabled"); } catch (e: any) { Alert.alert("Notifications", e?.message || "Failed to enable push"); } };
+  const reRegister = async () => { try { const token = await registerForPushNotificationsAsync(country, remind12h); setPushToken(token); toast("Re-registered"); } catch (e: any) { Alert.alert("Notifications", e?.message || "Failed to re-register"); } };
+  const onToggle12h = async (val: boolean) => { setRemind12h(val); try { if (pushToken) await registerForPushNotificationsAsync(country, val); } catch {} };
+  const sendTestPush = async () => { try { const token = pushToken || getRegisteredPushToken(); if (!token) return Alert.alert("Enable Push first"); await apiPost("/api/notifications/test_push", { token, body: "Test push from MVP" }); toast("Test push requested"); } catch (e: any) { Alert.alert("Failed", e?.message || "Error"); } };
+  const dispatchNow = async () => { try { const res = await apiPost("/api/notifications/dispatch_now"); toast(`Dispatched: ${res.sent}`); refreshStats(); } catch (e: any) { Alert.alert("Failed", e?.message || "Error"); } };
+  const scheduleAll48h = async () => { try { const res = await apiPost("/api/notifications/schedule_for_next_48h"); toast(`Scheduled: ${res.count}`); refreshStats(); } catch (e: any) { Alert.alert("Failed", e?.message || "Error"); } };
+  const scheduleHours = async () => { try { const h = parseInt(hours || "0"); const res = await apiPost("/api/notifications/schedule_for_next_hours", { hours: h }); toast(`Scheduled: ${res.count}`); refreshStats(); } catch (e: any) { Alert.alert("Failed", e?.message || "Error"); } };
+  const viewPending = async () => { try { const list = await apiGet("/api/notifications/pending?limit=50"); setPendingList(list); } catch (e: any) { Alert.alert("Failed", e?.message || "Error"); } };
+  const exportLogs = async () => { try { const csv = await fetch((process.env.EXPO_PUBLIC_BACKEND_URL || "") + "/api/notifications/logs.csv").then((r) => r.text()); Alert.alert("Logs CSV", csv.slice(0, 500) + (csv.length > 500 ? "..." : "")); } catch (e: any) { Alert.alert("Failed", e?.message || "Error"); } };
   const localTest = async () => { try { await sendLocalTestNotification(); toast("Local notification sent"); } catch { } };
 
   return (
@@ -115,48 +55,50 @@ export default function SettingsScreen() {
 
       <TouchableOpacity onPress={enablePush} style={styles.button}><Text style={styles.buttonTxt}>Enable Push (Expo)</Text></TouchableOpacity>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Admin Debug</Text>
-        <View style={styles.row}><Text style={styles.label}>Device token</Text><Text selectable style={styles.mono}>{pushToken || "—"}</Text></View>
-        <View style={styles.row}><Text style={styles.label}>Country</Text><Text style={styles.value}>{country}</Text></View>
-        <View style={styles.row}><Text style={styles.label}>Locale</Text><Text style={styles.value}>{locale}</Text></View>
-        <View style={styles.row}><Text style={styles.label}>Timezone</Text><Text style={styles.value}>{tz}</Text></View>
-        <View style={styles.row}><Text style={styles.label}>12h remind</Text><Text style={styles.value}>{remind12h ? "ON" : "OFF"}</Text></View>
+      {ADMIN_ENABLED && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Admin Debug</Text>
+          <View style={styles.row}><Text style={styles.label}>Device token</Text><Text selectable style={styles.mono}>{pushToken || "—"}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Country</Text><Text style={styles.value}>{country}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Locale</Text><Text style={styles.value}>{locale}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Timezone</Text><Text style={styles.value}>{tz}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>12h remind</Text><Text style={styles.value}>{remind12h ? "ON" : "OFF"}</Text></View>
 
-        <View style={{ height: 8 }} />
-        <TouchableOpacity onPress={sendTestPush} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Send test push</Text></TouchableOpacity>
-        <TouchableOpacity onPress={localTest} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Send local test notification</Text></TouchableOpacity>
-        <TouchableOpacity onPress={reRegister} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Re-register token</Text></TouchableOpacity>
-        <TouchableOpacity onPress={dispatchNow} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Dispatch now</Text></TouchableOpacity>
-        <TouchableOpacity onPress={scheduleAll48h} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Schedule all (next 48h)</Text></TouchableOpacity>
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center", marginTop: 10 }}>
-          <Text style={styles.label}>Next N hours</Text>
-          <TextInput value={hours} onChangeText={setHours} keyboardType="numeric" style={styles.input} />
-          <TouchableOpacity onPress={scheduleHours} style={[styles.buttonSecondary, { paddingHorizontal: 16 }]}><Text style={styles.buttonTxt}>Schedule</Text></TouchableOpacity>
-        </View>
+          <View style={{ height: 8 }} />
+          <TouchableOpacity onPress={sendTestPush} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Send test push</Text></TouchableOpacity>
+          <TouchableOpacity onPress={localTest} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Send local test notification</Text></TouchableOpacity>
+          <TouchableOpacity onPress={reRegister} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Re-register token</Text></TouchableOpacity>
+          <TouchableOpacity onPress={dispatchNow} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Dispatch now</Text></TouchableOpacity>
+          <TouchableOpacity onPress={scheduleAll48h} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Schedule all (next 48h)</Text></TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: 8, alignItems: "center", marginTop: 10 }}>
+            <Text style={styles.label}>Next N hours</Text>
+            <TextInput value={hours} onChangeText={setHours} keyboardType="numeric" style={styles.input} />
+            <TouchableOpacity onPress={scheduleHours} style={[styles.buttonSecondary, { paddingHorizontal: 16 }]}><Text style={styles.buttonTxt}>Schedule</Text></TouchableOpacity>
+          </View>
 
-        <View style={{ marginTop: 12 }}>
-          <Text style={styles.sectionTitle}>Queue</Text>
-          <View style={styles.row}><Text style={styles.label}>Pending</Text><Text style={styles.value}>{stats?.pending ?? "—"}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Sent (24h)</Text><Text style={styles.value}>{stats?.sent24 ?? "—"}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Skipped (24h)</Text><Text style={styles.value}>{stats?.skipped24 ?? "—"}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Errors (24h)</Text><Text style={styles.value}>{stats?.error24 ?? "—"}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Last dispatch</Text><Text style={styles.value}>{stats?.last ? `${stats.last.ts} • ${stats.last.durationMs}ms` : "—"}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>Last error</Text><Text style={styles.value}>{stats?.last?.lastError || "—"}</Text></View>
-          <TouchableOpacity onPress={viewPending} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>View pending list</Text></TouchableOpacity>
-          {pendingList && pendingList.length > 0 && (
-            <View style={{ marginTop: 8 }}>
-              {pendingList.map((p, i) => (
-                <Text key={i} style={styles.pendingItem}>{p.matchId.slice(0, 8)}… • {p.type} • {p.dueAt}</Text>
-              ))}
-            </View>
-          )}
-        </View>
+          <View style={{ marginTop: 12 }}>
+            <Text style={styles.sectionTitle}>Queue</Text>
+            <View style={styles.row}><Text style={styles.label}>Pending</Text><Text style={styles.value}>{stats?.pending ?? "—"}</Text></View>
+            <View style={styles.row}><Text style={styles.label}>Sent (24h)</Text><Text style={styles.value}>{stats?.sent24 ?? "—"}</Text></View>
+            <View style={styles.row}><Text style={styles.label}>Skipped (24h)</Text><Text style={styles.value}>{stats?.skipped24 ?? "—"}</Text></View>
+            <View style={styles.row}><Text style={styles.label}>Errors (24h)</Text><Text style={styles.value}>{stats?.error24 ?? "—"}</Text></View>
+            <View style={styles.row}><Text style={styles.label}>Last dispatch</Text><Text style={styles.value}>{stats?.last ? `${stats.last.ts} • ${stats.last.durationMs}ms` : "—"}</Text></View>
+            <View style={styles.row}><Text style={styles.label}>Last error</Text><Text style={styles.value}>{stats?.last?.lastError || "—"}</Text></View>
+            <TouchableOpacity onPress={viewPending} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>View pending list</Text></TouchableOpacity>
+            {pendingList && pendingList.length > 0 && (
+              <View style={{ marginTop: 8 }}>
+                {pendingList.map((p, i) => (
+                  <Text key={i} style={styles.pendingItem}>{p.matchId.slice(0, 8)}… • {p.type} • {p.dueAt}</Text>
+                ))}
+              </View>
+            )}
+          </View>
 
-        <View style={{ marginTop: 12 }}>
-          <TouchableOpacity onPress={exportLogs} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Export logs (CSV)</Text></TouchableOpacity>
+          <View style={{ marginTop: 12 }}>
+            <TouchableOpacity onPress={exportLogs} style={styles.buttonSecondary}><Text style={styles.buttonTxt}>Export logs (CSV)</Text></TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
     </ScrollView>
   );
 }
