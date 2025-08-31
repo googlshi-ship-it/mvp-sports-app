@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, SectionList, RefreshControl, TouchableOpacity }
 import GlassCard from "../../src/components/GlassCard";
 import { useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { apiGet, apiPost } from "../../src/api/client";
+import { apiGet, apiPost, RIVALRY_UI } from "../../src/api/client";
 
 const DEFAULT_COUNTRY = "CH";
 
