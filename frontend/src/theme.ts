@@ -28,12 +28,12 @@ export function useCardTokens() {
       marginHorizontal: 16,
       marginBottom: 12,
       padding: 16,
-      borderRadius: 18,
+      borderRadius: 16,
     },
     glass: {
-      backgroundColor: isDark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)",
+      backgroundColor: "rgba(255,255,255,0.05)",
       borderWidth: 1,
-      borderColor: isDark ? "rgba(255,255,255,0.20)" : "rgba(255,255,255,0.70)",
+      borderColor: "rgba(255,255,255,0.08)",
       ...(Platform.OS === "ios"
         ? {
             shadowColor: "#000",
@@ -43,7 +43,7 @@ export function useCardTokens() {
           }
         : { elevation: isDark ? 8 : 6 }),
     },
-    blurIntensity: Platform.OS === "ios" ? (isDark ? 90 : 80) : 0,
+    blurIntensity: Platform.OS === "ios" ? 30 : 0,
     isDark,
   };
 }
