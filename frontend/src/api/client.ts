@@ -4,6 +4,7 @@ import { useUIStore } from "../store/ui";
 import { useDemoStore } from "../store/demo";
 
 const base = (process.env.EXPO_PUBLIC_BACKEND_URL || (Constants.expoConfig as any)?.extra?.backend) as string | undefined;
+export const RIVALRY_UI = (process.env.EXPO_PUBLIC_RIVALRY_UI ?? "1") !== "0";
 
 async function withAuthHeaders(init?: RequestInit): Promise<RequestInit> {
   const token = useAuth.getState().token;
