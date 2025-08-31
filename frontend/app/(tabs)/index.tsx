@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   team: { color: "#fff", fontSize: 18, fontWeight: "700" },
   vs: { color: "#a0a0a0", marginHorizontal: 8 },
   channels: { color: "#a6b1be", marginTop: 12, fontSize: 12 },
-  topGlow: { position: "absolute", top: 0, left: 0, right: 0, height: 40, backgroundColor: "rgba(255, 215, 0, 0.3)", borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+  topGlow: { position: "absolute", top: 0, left: 0, right: 0, height: 40, backgroundColor: "rgba(255, 77, 109, 0.10)", borderTopLeftRadius: 16, borderTopRightRadius: 16 },
   derbyChip: { backgroundColor: "rgba(255, 77, 109, 0.2)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, marginLeft: 8 },
   derbyTxt: { color: "#ff4d6d", fontSize: 10, fontWeight: "600" },
 });
