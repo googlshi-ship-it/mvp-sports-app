@@ -389,16 +389,10 @@ def build_12h_message(match_doc: Dict) -> str:
     return f"Don't miss out: Vote for MVP for {home} – {away}"
 
 
-@api_router.post("/notifications/schedule_for_match")
-async def schedule_for_match(body: ScheduleRequest):
-    try:
-        oid = ObjectId(body.matchId)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid match id")
+async def _schedule_for_match_oid(oid: ObjectId):
     match_doc = await db.matches.find_one({"_id": oid})
     if not match_doc:
-        raise HTTPException(status_code=404, detail="Match not found")
-
+        return
     start: datetime = match_doc.get("startTime")
     if isinstance(start, str):
         start = datetime.fromisoformat(start)
@@ -407,7 +401,6 @@ async def schedule_for_match(body: ScheduleRequest):
 
     tokens = await db.push_tokens.find().to_list(10000)
 
-    # Create notifications entries
     to_insert = []
     for t in tokens:
         to_insert.append({
@@ -428,7 +421,6 @@ async def schedule_for_match(body: ScheduleRequest):
                 "createdAt": datetime.utcnow(),
             })
 
-    # Avoid duplicates: ensure unique by (matchId, token, type)
     for n in to_insert:
         exists = await db.notifications.find_one({
             "matchId": oid,
@@ -438,7 +430,31 @@ async def schedule_for_match(body: ScheduleRequest):
         if not exists:
             await db.notifications.insert_one(n)
 
+
+@api_router.post("/notifications/schedule_for_match")
+async def schedule_for_match(body: ScheduleRequest):
+    try:
+        oid = ObjectId(body.matchId)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid match id")
+    await _schedule_for_match_oid(oid)
+    match_doc = await db.matches.find_one({"_id": oid})
+    start: datetime = match_doc.get("startTime")
+    if isinstance(start, str):
+        start = datetime.fromisoformat(start)
+    start = start.astimezone(timezone.utc)
+    finish = start + timedelta(minutes=match_duration_minutes(match_doc.get("sport", "")))
     return {"scheduled": True, "finalAt": finish.isoformat()}
+
+
+@api_router.post("/notifications/schedule_for_next_48h")
+async def schedule_for_next_48h():
+    now = datetime.now(timezone.utc)
+    end = now + timedelta(hours=48)
+    matches = await db.matches.find({"startTime": {"$gte": now, "$lte": end}}).to_list(10000)
+    for m in matches:
+        await _schedule_for_match_oid(m["_id"])
+    return {"count": len(matches)}
 
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
@@ -500,6 +516,26 @@ async def _dispatch_now_internal():
 async def dispatch_now():
     sent = await _dispatch_now_internal()
     return {"sent": sent}
+
+
+@api_router.post("/notifications/test_push")
+async def test_push(body: Dict[str, str]):
+    token = body.get("token")
+    msg = body.get("body") or "Test push from MVP"
+    if not token:
+        raise HTTPException(status_code=400, detail="token required")
+    payload = [{
+        "to": token,
+        "sound": "default",
+        "title": "MVP",
+        "body": msg,
+        "data": {"test": True},
+    }]
+    try:
+        r = requests.post(EXPO_PUSH_URL, json=payload, timeout=20, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 async def _dispatch_loop():
@@ -583,6 +619,13 @@ async def import_thesportsdb(body: ImportRequest):
                 else:
                     await db.matches.insert_one(doc)
                     created += 1
+    # Auto-schedule for next 48h (idempotent)
+    now = datetime.now(timezone.utc)
+    end = now + timedelta(hours=48)
+    matches = await db.matches.find({"startTime": {"$gte": now, "$lte": end}}).to_list(10000)
+    for m in matches:
+        await _schedule_for_match_oid(m["_id"])
+
     return {"created": created, "updated": updated}
 
 
