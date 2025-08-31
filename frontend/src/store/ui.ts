@@ -10,6 +10,6 @@ type UIState = {
 export const useUIStore = create<UIState>((set) => ({
   reduceEffects: false,
   setReduceEffects: (v) => set({ reduceEffects: v }),
-  demoMode: false,
+  demoMode: true,
   setDemoMode: (v) => set({ demoMode: v }),
 }));
