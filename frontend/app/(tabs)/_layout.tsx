@@ -1,9 +1,7 @@
-import React from "react";
-import { Tabs } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { tokens } from "../../src/ui/theme";
-import { Ionicons } from "@expo/vector-icons";
-import HeaderAvatar from "../../src/components/HeaderAvatar";
+import { Tabs } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import HeaderAvatar from '../../src/components/HeaderAvatar';
 
 export default function TabsLayout() {
   return (
@@ -11,39 +9,35 @@ export default function TabsLayout() {
       <StatusBar style="light" />
       <Tabs
         screenOptions={{
+          headerTitleAlign: 'center',
           headerTransparent: false,
-          headerTitleAlign: "center",
-          headerTintColor: '#fff',
           headerStyle: { backgroundColor: '#000' },
-          headerRight: () => <HeaderAvatar />,
-          tabBarActiveTintColor: tokens.brand,
-          tabBarInactiveTintColor: "#9AA3B2",
+          headerTintColor: '#fff',
           tabBarStyle: {
             backgroundColor: '#000',
-            borderTopColor: "transparent",
+            borderTopColor: 'transparent',
             height: 64,
             paddingBottom: 10,
           },
+          headerRight: () => <HeaderAvatar />,
         }}
       >
         <Tabs.Screen
           name="competitions"
           options={{
-            title: "Competitions",
-            headerTitleAlign: 'center',
-            headerStyle: { backgroundColor: '#000' },
-            headerTintColor: '#fff',
-            tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
+            title: 'Competitions',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="grid-outline" size={size} color={color} />
+            ),
           }}
         />
         <Tabs.Screen
           name="matches"
           options={{
-            title: "Matches",
-            headerTitleAlign: 'center',
-            headerStyle: { backgroundColor: '#000' },
-            headerTintColor: '#fff',
-            tabBarIcon: ({ color, size }) => <Ionicons name="trophy-outline" size={size} color={color} />,
+            title: 'Matches',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="trophy-outline" size={size} color={color} />
+            ),
           }}
         />
       </Tabs>
