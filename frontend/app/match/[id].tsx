@@ -73,7 +73,7 @@ export default function MatchDetails() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const m = await apiGet(`/api/matches/${id}?include=lineups&amp;tz=${encodeURIComponent(tz)}`);
+      const m = await apiGet(`/api/matches/${id}?include=lineups&tz=${encodeURIComponent(tz)}`);
       setMatch(m);
       const v = await apiGet(`/api/matches/${id}/votes`);
       setVotesData(v);
