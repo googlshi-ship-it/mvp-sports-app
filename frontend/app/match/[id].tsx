@@ -308,7 +308,7 @@ export default function MatchDetails() {
                 {ADMIN_ENABLED && <TouchableOpacity onPress={() => openAdmin("injuries")} style={styles.smallBtn}><Ionicons name="create-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Edit JSON</Text></TouchableOpacity>}
               </View>
             </View>
-            {!lineups || ((!lineups.home?.unavailable || lineups.home.unavailable.length === 0) &amp;&amp; (!lineups.away?.unavailable || lineups.away.unavailable.length === 0)) ? (
+            {!lineups || ((!lineups.home?.unavailable || lineups.home.unavailable.length === 0) && (!lineups.away?.unavailable || lineups.away.unavailable.length === 0)) ? (
               <View>
                 <Text style={styles.voteLine}>No injuries/suspensions reported</Text>
                 <TouchableOpacity onPress={load} style={[styles.smallBtn, { marginTop: 8, alignSelf: "flex-start" }]}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Try again</Text></TouchableOpacity>
