@@ -241,7 +241,7 @@ export default function MatchDetails() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0a0a0f" }} edges={["bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#0a0a0f" }} edges={["top","left","right","bottom"]}>
       <Stack.Screen
         options={{
           title: `Match ${id ?? ""}`,
