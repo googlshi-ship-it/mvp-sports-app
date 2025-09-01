@@ -128,6 +128,21 @@ export default function MatchDetails() {
     try { const tokenPush = getRegisteredPushToken(); const res = await apiPost(`/api/matches/${id}/player_ratings`, { token: tokenPush, player: name.trim(), ...playerRatings }); setPlayerAvg(res); toast("Submitted"); } catch (e) { console.warn(e); }
   };
 
+  // ---- voting window check ----
+  const isVotingWindowOpen = (m: any) => {
+    if (!m) return false;
+    if (typeof m.isVotingOpen === "boolean") return m.isVotingOpen;
+    try {
+      const start = m.startTime ? new Date(m.startTime).getTime() : NaN;
+      if (Number.isNaN(start)) return false;
+      const end = start + 2 * 60 * 60 * 1000; // 2 hours
+      return Date.now() >= end;
+    } catch {
+      return false;
+    }
+  };
+  const votingOpen = isVotingWindowOpen(match);
+
   const Card: any = reduceEffects ? View : BlurView;
   const cardProps: any = reduceEffects ? {} : { intensity: 30, tint: "dark" };
 
@@ -209,7 +224,6 @@ export default function MatchDetails() {
       const url = typeof window !== "undefined" ? window.location.origin + `/match/${id}` : `https://example.com/match/${id}`;
       const message = `${home} vs ${away} — ${time}. Join the vote: ${url}`;
       if (Platform.OS === "web") {
-        // Web share
         // @ts-ignore
         if (navigator && navigator.share) {
           // @ts-ignore
@@ -263,7 +277,7 @@ export default function MatchDetails() {
             {(match?.stadium || match?.venue) ? <Text style={styles.channels}>{match.stadium || match.venue}</Text> : null}
           </Card>
 
-          {/* Lineups card */}
+          {/* Lineups */}
           <Card {...cardProps} style={styles.card}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={styles.blockTitle}>Lineups</Text>
@@ -299,7 +313,7 @@ export default function MatchDetails() {
             )}
           </Card>
 
-          {/* Unavailable card */}
+          {/* Unavailable */}
           <Card {...cardProps} style={styles.card}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={styles.blockTitle}>Unavailable</Text>
@@ -337,6 +351,7 @@ export default function MatchDetails() {
             )}
           </Card>
 
+          {/* Channels */}
           <Card {...cardProps} style={styles.card}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={styles.blockTitle}>Channels</Text>
@@ -359,40 +374,47 @@ export default function MatchDetails() {
             <Text style={styles.channels}>{country}: {channels.length ? channels.join(", ") : "TBD"}</Text>
           </Card>
 
-          <Card {...cardProps} style={styles.card}>
-            <Text style={styles.blockTitle}>Rate the match</Text>
-            <View style={styles.row}>
-              <TouchableOpacity onPress={() => rate(true)} style={[styles.btn, { backgroundColor: "#1a2" }]}><Ionicons name="thumbs-up-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Like</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => rate(false)} style={[styles.btn, { backgroundColor: "#a21" }]}><Ionicons name="thumbs-down-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Dislike</Text></TouchableOpacity>
-            </View>
-            {!!rating && <Text style={styles.voteLine}>Likes: {rating.likes} • Dislikes: {rating.dislikes} • {rating.likePct}% 👍</Text>}
-          </Card>
-
-          <Card {...cardProps} style={styles.card}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={styles.blockTitle}>Cast your vote</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                {scheduled && <Text style={styles.subtle}>Reminders scheduled</Text>}
-                <TouchableOpacity onPress={scheduleVoteReminders} style={styles.smallBtn}><Ionicons name="notifications-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Schedule</Text></TouchableOpacity>
-                <TouchableOpacity onPress={rescheduleReminders} style={styles.smallBtn}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Reschedule</Text></TouchableOpacity>
-                <TouchableOpacity onPress={cancelReminders} style={styles.smallBtn}><Ionicons name="close-circle-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Cancel</Text></TouchableOpacity>
-                <TouchableOpacity onPress={simulateFinish} style={styles.smallBtn}><Ionicons name="fast-forward-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Simulate finish</Text></TouchableOpacity>
-                <TouchableOpacity onPress={notifyTestAudience} style={styles.smallBtn}><Ionicons name="megaphone-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Notify test audience</Text></TouchableOpacity>
+          {/* Rate the match - only after match */}
+          {votingOpen && (
+            <Card {...cardProps} style={styles.card}>
+              <Text style={styles.blockTitle}>Rate the match</Text>
+              <View style={styles.row}>
+                <TouchableOpacity onPress={() => rate(true)} style={[styles.btn, { backgroundColor: "#1a2" }]}><Ionicons name="thumbs-up-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Like</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => rate(false)} style={[styles.btn, { backgroundColor: "#a21" }]}><Ionicons name="thumbs-down-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Dislike</Text></TouchableOpacity>
               </View>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
-              {cats.map((c) => (
-                <TouchableOpacity key={c.key} onPress={() => setSelectedCat(c.key)} style={[styles.chip, selectedCat === c.key && styles.chipActive]}>
-                  <Text style={[styles.chipTxt, selectedCat === c.key && styles.chipTxtActive]}>{c.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <View style={{ height: 8 }} />
-            <TextInput placeholder="Player/fighter name" placeholderTextColor="#8a90a4" value={name} onChangeText={setName} style={styles.input} returnKeyType="send" onSubmitEditing={submitVote} />
-            <TouchableOpacity disabled={submitting || !name.trim()} onPress={submitVote} style={[styles.submit, (!name.trim() || submitting) && { opacity: 0.6 }]}><Ionicons name="send-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>{submitting ? "Submitting..." : "Submit Vote"}</Text></TouchableOpacity>
-          </Card>
+              {!!rating && <Text style={styles.voteLine}>Likes: {rating.likes} • Dislikes: {rating.dislikes} • {rating.likePct}% 👍</Text>}
+            </Card>
+          )}
 
-          {match?.sport === "football" && (
+          {/* Cast your vote - only after match */}
+          {votingOpen && (
+            <Card {...cardProps} style={styles.card}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={styles.blockTitle}>Cast your vote</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  {scheduled && <Text style={styles.subtle}>Reminders scheduled</Text>}
+                  <TouchableOpacity onPress={scheduleVoteReminders} style={styles.smallBtn}><Ionicons name="notifications-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Schedule</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={rescheduleReminders} style={styles.smallBtn}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Reschedule</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={cancelReminders} style={styles.smallBtn}><Ionicons name="close-circle-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Cancel</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={simulateFinish} style={styles.smallBtn}><Ionicons name="fast-forward-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Simulate finish</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={notifyTestAudience} style={styles.smallBtn}><Ionicons name="megaphone-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Notify test audience</Text></TouchableOpacity>
+                </View>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
+                {cats.map((c) => (
+                  <TouchableOpacity key={c.key} onPress={() => setSelectedCat(c.key)} style={[styles.chip, selectedCat === c.key && styles.chipActive]}>
+                    <Text style={[styles.chipTxt, selectedCat === c.key && styles.chipTxtActive]}>{c.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <View style={{ height: 8 }} />
+              <TextInput placeholder="Player/fighter name" placeholderTextColor="#8a90a4" value={name} onChangeText={setName} style={styles.input} returnKeyType="send" onSubmitEditing={submitVote} />
+              <TouchableOpacity disabled={submitting || !name.trim()} onPress={submitVote} style={[styles.submit, (!name.trim() || submitting) && { opacity: 0.6 }]}><Ionicons name="send-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>{submitting ? "Submitting..." : "Submit Vote"}</Text></TouchableOpacity>
+            </Card>
+          )}
+
+          {/* Player star ratings - only after match */}
+          {match?.sport === "football" && votingOpen && (
             <Card {...cardProps} style={styles.card}>
               <Text style={styles.blockTitle}>Player star ratings (10⭐ each)</Text>
               <Text style={styles.voteLine}>Rate: {name || "(enter player name above)"}</Text>
@@ -409,6 +431,14 @@ export default function MatchDetails() {
             </Card>
           )}
 
+          {/* Teaser before match */}
+          {!votingOpen && (
+            <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+              <Text style={styles.subtle}>Voting opens after the match ends.</Text>
+            </View>
+          )}
+
+          {/* Results - always visible */}
           <Card {...cardProps} style={styles.card}>
             <Text style={styles.blockTitle}>Fan voting (results)</Text>
             {!votesData || Object.keys(votesData?.percentages || {}).length === 0 ? (
@@ -434,7 +464,7 @@ export default function MatchDetails() {
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
             <ScrollView style={{ flex: 1, backgroundColor: "#0a0a0f" }} contentContainerStyle={{ padding: 16 }}>
               <Text style={{ color: "#fff", fontSize: 18, fontWeight: "800", marginBottom: 12 }}>Edit {adminModal.kind} JSON</Text>
-              <Text style={{ color: "c7d1df", marginBottom: 8 }}>X-Admin-Token</Text>
+              <Text style={{ color: "#c7d1df", marginBottom: 8 }}>X-Admin-Token</Text>
               <TextInput value={adminModal.token} onChangeText={(t) => setAdminModal({ ...adminModal, token: t })} style={[styles.input, { marginBottom: 10 }]} placeholder="CHANGEME" placeholderTextColor="#8a90a4" />
               <TextInput value={adminModal.json} onChangeText={(t) => setAdminModal({ ...adminModal, json: t })} style={[styles.input, { minHeight: 240, textAlignVertical: "top" }]} multiline placeholder="{}" placeholderTextColor="#8a90a4" />
               <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
@@ -513,4 +543,4 @@ const styles = StyleSheet.create({
   topGlow: { position: "absolute", top: 0, left: 0, right: 0, height: 40, backgroundColor: "rgba(255, 77, 109, 0.10)", borderTopLeftRadius: 16, borderTopRightRadius: 16 },
   derbyChip: { backgroundColor: "rgba(255, 77, 109, 0.2)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
   derbyTxt: { color: "#ff4d6d", fontSize: 10, fontWeight: "600" },
-});// TEST COMMENT
+});
