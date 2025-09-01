@@ -92,7 +92,7 @@ export default function MatchDetails() {
 
   useEffect(() => { load(); }, [load]);
 
-  useEffect(() => { const c = cats; if (c.length &amp;&amp; !selectedCat) setSelectedCat(c[0].key); }, [cats, selectedCat]);
+  useEffect(() => { const c = cats; if (c.length && !selectedCat) setSelectedCat(c[0].key); }, [cats, selectedCat]);
 
   const requireAuth = () => {
     if (!token) {
