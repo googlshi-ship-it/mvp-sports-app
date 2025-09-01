@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ToastAndroid, Alert, RefreshControl, Modal, Share } from "react-native";
 import { BlurView } from "expo-blur";
@@ -9,6 +9,7 @@ import { useUIStore } from "../../src/store/ui";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../src/store/auth";
 import * as Clipboard from "expo-clipboard";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 function sportIcon(sport?: string) {
   if (sport === "football") return <Ionicons name="football-outline" size={18} color="#8a7cff" />;
@@ -40,7 +41,7 @@ const COUNTRIES = ["CH", "DE", "AT", "FR", "IT", "GB", "US", "GE", "ES", "GR"] a
 
 type CountryCode = typeof COUNTRIES[number];
 
-const ADMIN_ENABLED = (typeof __DEV__ !== "undefined" && __DEV__) || (process.env.EXPO_PUBLIC_ADMIN_DEBUG === "1");
+const ADMIN_ENABLED = (typeof __DEV__ !== "undefined" &amp;&amp; __DEV__) || (process.env.EXPO_PUBLIC_ADMIN_DEBUG === "1");
 
 export default function MatchDetails() {
   const { id } = useLocalSearchParams();
@@ -72,7 +73,7 @@ export default function MatchDetails() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const m = await apiGet(`/api/matches/${id}?include=lineups&tz=${encodeURIComponent(tz)}`);
+      const m = await apiGet(`/api/matches/${id}?include=lineups&amp;tz=${encodeURIComponent(tz)}`);
       setMatch(m);
       const v = await apiGet(`/api/matches/${id}/votes`);
       setVotesData(v);
@@ -91,7 +92,7 @@ export default function MatchDetails() {
 
   useEffect(() => { load(); }, [load]);
 
-  useEffect(() => { const c = cats; if (c.length && !selectedCat) setSelectedCat(c[0].key); }, [cats, selectedCat]);
+  useEffect(() => { const c = cats; if (c.length &amp;&amp; !selectedCat) setSelectedCat(c[0].key); }, [cats, selectedCat]);
 
   const requireAuth = () => {
     if (!token) {
@@ -210,7 +211,7 @@ export default function MatchDetails() {
       if (Platform.OS === "web") {
         // Web share
         // @ts-ignore
-        if (navigator && navigator.share) {
+        if (navigator &amp;&amp; navigator.share) {
           // @ts-ignore
           await navigator.share({ title: `${home} vs ${away}`, url, text: message });
           return;
@@ -226,217 +227,225 @@ export default function MatchDetails() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 260 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}>
-        <View style={styles.header}>
-          {sportIcon(match?.sport)}
-          <Text style={styles.headerTxt}>{match?.tournament || "—"}</Text>
-          {RIVALRY_UI && match?.rivalry?.enabled ? (
-            <View style={styles.derbyChip}><Text style={styles.derbyTxt}>🔥 {match?.rivalry?.tag || "Derby"}</Text></View>
-          ) : null}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: "auto" }}>
-            {queueCount !== null && <Text style={styles.queueChip}>Queue {queueCount}</Text>}
-            <TouchableOpacity onPress={onShare} style={[styles.smallBtn, { paddingVertical: 6, paddingHorizontal: 8 }]}>
-              <Ionicons name="share-outline" size={16} color="#fff" />
-              <Text style={styles.smallBtnTxt}>Share</Text>
-            </TouchableOpacity>
-          </View>
-          {match?.subgroup ? <Text style={styles.subgroup}> · {match.subgroup}</Text> : null}
-        </View>
-
-        <Card {...cardProps} style={styles.card}>
-          {RIVALRY_UI && match?.rivalry?.enabled ? (<View pointerEvents="none" style={styles.topGlow} />) : null}
-          <Text style={styles.time}>{kickoff}</Text>
-          <View style={styles.teamsRow}>
-            <Text style={styles.team}>{match?.homeTeam?.name || "—"}</Text>
-            <Text style={styles.vs}> — </Text>
-            <Text style={styles.team}>{match?.awayTeam?.name || "—"}</Text>
-          </View>
-          {(match?.stadium || match?.venue) ? <Text style={styles.channels}>{match.stadium || match.venue}</Text> : null}
-        </Card>
-
-        {/* Lineups card */}
-        <Card {...cardProps} style={styles.card}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={styles.blockTitle}>Lineups</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              {statusBadge(lineups?.lineups_status)}
-              {updatedLineups && <Text style={styles.subtle}>Updated {updatedLineups.toLocaleTimeString()}</Text>}
-              {ADMIN_ENABLED && <TouchableOpacity onPress={() => openAdmin("lineups")} style={styles.smallBtn}><Ionicons name="create-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Edit JSON</Text></TouchableOpacity>}
-            </View>
-          </View>
-          {!!lineups?.formation_home || !!lineups?.formation_away ? (
-            <Text style={[styles.subtle, { marginTop: 4 }]}>{lineups?.formation_home || "—"} vs {lineups?.formation_away || "—"}</Text>
-          ) : null}
-          {!lineups || (!lineups.home?.starters?.length && !lineups.away?.starters?.length && !lineups.home?.bench?.length && !lineups.away?.bench?.length) ? (
-            <View>
-              <Text style={styles.voteLine}>No lineups yet</Text>
-              <TouchableOpacity onPress={load} style={[styles.smallBtn, { marginTop: 8, alignSelf: "flex-start" }]}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Try again</Text></TouchableOpacity>
-            </View>
-          ) : (
-            <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle}>Home — Starters</Text>
-                {(lineups.home?.starters || []).map(renderPerson)}
-                <Text style={[styles.sectionTitle, { marginTop: 8 }]}>Bench</Text>
-                {(lineups.home?.bench || []).map(renderPerson)}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle}>Away — Starters</Text>
-                {(lineups.away?.starters || []).map(renderPerson)}
-                <Text style={[styles.sectionTitle, { marginTop: 8 }]}>Bench</Text>
-                {(lineups.away?.bench || []).map(renderPerson)}
-              </View>
-            </View>
-          )}
-        </Card>
-
-        {/* Unavailable card */}
-        <Card {...cardProps} style={styles.card}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={styles.blockTitle}>Unavailable</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              {updatedInjuries && <Text style={styles.subtle}>Updated {updatedInjuries.toLocaleTimeString()}</Text>}
-              {ADMIN_ENABLED && <TouchableOpacity onPress={() => openAdmin("injuries")} style={styles.smallBtn}><Ionicons name="create-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Edit JSON</Text></TouchableOpacity>}
-            </View>
-          </View>
-          {!lineups || ((!lineups.home?.unavailable || lineups.home.unavailable.length === 0) && (!lineups.away?.unavailable || lineups.away.unavailable.length === 0)) ? (
-            <View>
-              <Text style={styles.voteLine}>No injuries/suspensions reported</Text>
-              <TouchableOpacity onPress={load} style={[styles.smallBtn, { marginTop: 8, alignSelf: "flex-start" }]}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Try again</Text></TouchableOpacity>
-            </View>
-          ) : (
-            <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle}>Home</Text>
-                {(lineups.home?.unavailable || []).map((p: any, idx: number) => (
-                  <View key={p?.playerId || `${p?.name}-home-${idx}`} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <StatusChip status={p?.status} />
-                    <Text style={styles.person}>{p?.name || "—"}{p?.reason ? ` — ${p.reason}` : ""}</Text>
-                  </View>
-                ))}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle}>Away</Text>
-                {(lineups.away?.unavailable || []).map((p: any, idx: number) => (
-                  <View key={p?.playerId || `${p?.name}-away-${idx}`} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <StatusChip status={p?.status} />
-                    <Text style={styles.person}>{p?.name || "—"}{p?.reason ? ` — ${p.reason}` : ""}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-        </Card>
-
-        <Card {...cardProps} style={styles.card}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={styles.blockTitle}>Channels</Text>
-            <TouchableOpacity onPress={() => setCountryOpen((s) => !s)} style={styles.countryBtn}>
-              <Ionicons name="flag-outline" color="#fff" size={14} />
-              <Text style={styles.countryTxt}>{country}</Text>
-              <Ionicons name={countryOpen ? "chevron-up" : "chevron-down"} color="#fff" size={16} />
-            </TouchableOpacity>
-          </View>
-          {countryOpen && (
-            <View style={styles.countryList}>
-              {COUNTRIES.map((c) => (
-                <TouchableOpacity key={c} style={styles.countryItem} onPress={() => { setCountry(c); setCountryOpen(false); }}>
-                  <Ionicons name="flag-outline" color="#c7d1df" size={14} />
-                  <Text style={styles.countryItemTxt}>{c}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-          <Text style={styles.channels}>{country}: {channels.length ? channels.join(", ") : "TBD"}</Text>
-        </Card>
-
-        <Card {...cardProps} style={styles.card}>
-          <Text style={styles.blockTitle}>Rate the match</Text>
-          <View style={styles.row}>
-            <TouchableOpacity onPress={() => rate(true)} style={[styles.btn, { backgroundColor: "#1a2" }]}><Ionicons name="thumbs-up-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Like</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => rate(false)} style={[styles.btn, { backgroundColor: "#a21" }]}><Ionicons name="thumbs-down-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Dislike</Text></TouchableOpacity>
-          </View>
-          {!!rating && <Text style={styles.voteLine}>Likes: {rating.likes} • Dislikes: {rating.dislikes} • {rating.likePct}% 👍</Text>}
-        </Card>
-
-        <Card {...cardProps} style={styles.card}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={styles.blockTitle}>Cast your vote</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              {scheduled && <Text style={styles.subtle}>Reminders scheduled</Text>}
-              <TouchableOpacity onPress={scheduleVoteReminders} style={styles.smallBtn}><Ionicons name="notifications-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Schedule</Text></TouchableOpacity>
-              <TouchableOpacity onPress={rescheduleReminders} style={styles.smallBtn}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Reschedule</Text></TouchableOpacity>
-              <TouchableOpacity onPress={cancelReminders} style={styles.smallBtn}><Ionicons name="close-circle-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Cancel</Text></TouchableOpacity>
-              <TouchableOpacity onPress={simulateFinish} style={styles.smallBtn}><Ionicons name="fast-forward-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Simulate finish</Text></TouchableOpacity>
-              <TouchableOpacity onPress={notifyTestAudience} style={styles.smallBtn}><Ionicons name="megaphone-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Notify test audience</Text></TouchableOpacity>
-            </View>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
-            {cats.map((c) => (
-              <TouchableOpacity key={c.key} onPress={() => setSelectedCat(c.key)} style={[styles.chip, selectedCat === c.key && styles.chipActive]}>
-                <Text style={[styles.chipTxt, selectedCat === c.key && styles.chipTxtActive]}>{c.label}</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#0a0a0f" }} edges={["bottom"]}>
+      <Stack.Screen
+        options={{
+          title: `Match ${id ?? ""}`,
+          headerBackTitle: "Back",
+        }}
+      />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 260 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}>
+          <View style={styles.header}>
+            {sportIcon(match?.sport)}
+            <Text style={styles.headerTxt}>{match?.tournament || "—"}</Text>
+            {RIVALRY_UI &amp;&amp; match?.rivalry?.enabled ? (
+              <View style={styles.derbyChip}><Text style={styles.derbyTxt}>🔥 {match?.rivalry?.tag || "Derby"}</Text></View>
+            ) : null}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+              {queueCount !== null &amp;&amp; <Text style={styles.queueChip}>Queue {queueCount}</Text>}
+              <TouchableOpacity onPress={onShare} style={[styles.smallBtn, { paddingVertical: 6, paddingHorizontal: 8 }]}>
+                <Ionicons name="share-outline" size={16} color="#fff" />
+                <Text style={styles.smallBtnTxt}>Share</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <View style={{ height: 8 }} />
-          <TextInput placeholder="Player/fighter name" placeholderTextColor="#8a90a4" value={name} onChangeText={setName} style={styles.input} returnKeyType="send" onSubmitEditing={submitVote} />
-          <TouchableOpacity disabled={submitting || !name.trim()} onPress={submitVote} style={[styles.submit, (!name.trim() || submitting) && { opacity: 0.6 }]}><Ionicons name="send-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>{submitting ? "Submitting..." : "Submit Vote"}</Text></TouchableOpacity>
-        </Card>
+            </View>
+            {match?.subgroup ? <Text style={styles.subgroup}> · {match.subgroup}</Text> : null}
+          </View>
 
-        {match?.sport === "football" && (
           <Card {...cardProps} style={styles.card}>
-            <Text style={styles.blockTitle}>Player star ratings (10⭐ each)</Text>
-            <Text style={styles.voteLine}>Rate: {name || "(enter player name above)"}</Text>
-            <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Attack</Text><StarRow value={playerRatings.attack} onChange={(v) => setPlayerRatings((s) => ({ ...s, attack: v }))} /></View>
-            <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Defense</Text><StarRow value={playerRatings.defense} onChange={(v) => setPlayerRatings((s) => ({ ...s, defense: v }))} /></View>
-            <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Passing</Text><StarRow value={playerRatings.passing} onChange={(v) => setPlayerRatings((s) => ({ ...s, passing: v }))} /></View>
-            <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Dribbling</Text><StarRow value={playerRatings.dribbling} onChange={(v) => setPlayerRatings((s) => ({ ...s, dribbling: v }))} /></View>
-            <TouchableOpacity onPress={submitPlayerRatings} style={styles.submit}><Ionicons name="save-outline" size={18} color="#fff" /><Text style={styles.smallBtnTxt}>Submit Ratings</Text></TouchableOpacity>
-            {playerAvg && (
-              <View style={{ marginTop: 10 }}>
-                <Text style={styles.voteLine}>Community averages (n={playerAvg.count}): A {playerAvg.averages.attack} • D {playerAvg.averages.defense} • P {playerAvg.averages.passing} • Dr {playerAvg.averages.dribbling} • Overall {playerAvg.overall}</Text>
+            {RIVALRY_UI &amp;&amp; match?.rivalry?.enabled ? (<View pointerEvents="none" style={styles.topGlow} />) : null}
+            <Text style={styles.time}>{kickoff}</Text>
+            <View style={styles.teamsRow}>
+              <Text style={styles.team}>{match?.homeTeam?.name || "—"}</Text>
+              <Text style={styles.vs}> — </Text>
+              <Text style={styles.team}>{match?.awayTeam?.name || "—"}</Text>
+            </View>
+            {(match?.stadium || match?.venue) ? <Text style={styles.channels}>{match.stadium || match.venue}</Text> : null}
+          </Card>
+
+          {/* Lineups card */}
+          <Card {...cardProps} style={styles.card}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={styles.blockTitle}>Lineups</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                {statusBadge(lineups?.lineups_status)}
+                {updatedLineups &amp;&amp; <Text style={styles.subtle}>Updated {updatedLineups.toLocaleTimeString()}</Text>}
+                {ADMIN_ENABLED &amp;&amp; <TouchableOpacity onPress={() => openAdmin("lineups")} style={styles.smallBtn}><Ionicons name="create-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Edit JSON</Text></TouchableOpacity>}
+              </View>
+            </View>
+            {!!lineups?.formation_home || !!lineups?.formation_away ? (
+              <Text style={[styles.subtle, { marginTop: 4 }]}>{lineups?.formation_home || "—"} vs {lineups?.formation_away || "—"}</Text>
+            ) : null}
+            {!lineups || (!lineups.home?.starters?.length &amp;&amp; !lineups.away?.starters?.length &amp;&amp; !lineups.home?.bench?.length &amp;&amp; !lineups.away?.bench?.length) ? (
+              <View>
+                <Text style={styles.voteLine}>No lineups yet</Text>
+                <TouchableOpacity onPress={load} style={[styles.smallBtn, { marginTop: 8, alignSelf: "flex-start" }]}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Try again</Text></TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sectionTitle}>Home — Starters</Text>
+                  {(lineups.home?.starters || []).map(renderPerson)}
+                  <Text style={[styles.sectionTitle, { marginTop: 8 }]}>Bench</Text>
+                  {(lineups.home?.bench || []).map(renderPerson)}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sectionTitle}>Away — Starters</Text>
+                  {(lineups.away?.starters || []).map(renderPerson)}
+                  <Text style={[styles.sectionTitle, { marginTop: 8 }]}>Bench</Text>
+                  {(lineups.away?.bench || []).map(renderPerson)}
+                </View>
               </View>
             )}
           </Card>
-        )}
 
-        <Card {...cardProps} style={styles.card}>
-          <Text style={styles.blockTitle}>Fan voting (results)</Text>
-          {!votesData || Object.keys(votesData?.percentages || {}).length === 0 ? (
-            <Text style={styles.voteLine}>No votes yet</Text>
-          ) : (
-            Object.entries(votesData.percentages || {}).map(([cat, entries]: any) => (
-              <View key={cat} style={{ marginTop: 10 }}>
-                <Text style={[styles.voteLine, { marginBottom: 6 }]}>{cat.replaceAll("_", " ")} • total {votesData.totals?.[cat] ?? 0}</Text>
-                {Object.entries(entries as any).map(([player, pct]: any) => (
-                  <View key={player} style={styles.barRow}>
-                    <View style={styles.barBg}><View style={[styles.bar, { width: `${pct}%` }]} /></View>
-                    <Text style={styles.barTxt}>{player} — {pct}%</Text>
-                  </View>
+          {/* Unavailable card */}
+          <Card {...cardProps} style={styles.card}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={styles.blockTitle}>Unavailable</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                {updatedInjuries &amp;&amp; <Text style={styles.subtle}>Updated {updatedInjuries.toLocaleTimeString()}</Text>}
+                {ADMIN_ENABLED &amp;&amp; <TouchableOpacity onPress={() => openAdmin("injuries")} style={styles.smallBtn}><Ionicons name="create-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Edit JSON</Text></TouchableOpacity>}
+              </View>
+            </View>
+            {!lineups || ((!lineups.home?.unavailable || lineups.home.unavailable.length === 0) &amp;&amp; (!lineups.away?.unavailable || lineups.away.unavailable.length === 0)) ? (
+              <View>
+                <Text style={styles.voteLine}>No injuries/suspensions reported</Text>
+                <TouchableOpacity onPress={load} style={[styles.smallBtn, { marginTop: 8, alignSelf: "flex-start" }]}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Try again</Text></TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sectionTitle}>Home</Text>
+                  {(lineups.home?.unavailable || []).map((p: any, idx: number) => (
+                    <View key={p?.playerId || `${p?.name}-home-${idx}`} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <StatusChip status={p?.status} />
+                      <Text style={styles.person}>{p?.name || "—"}{p?.reason ? ` — ${p.reason}` : ""}</Text>
+                    </View>
+                  ))}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sectionTitle}>Away</Text>
+                  {(lineups.away?.unavailable || []).map((p: any, idx: number) => (
+                    <View key={p?.playerId || `${p?.name}-away-${idx}`} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <StatusChip status={p?.status} />
+                      <Text style={styles.person}>{p?.name || "—"}{p?.reason ? ` — ${p.reason}` : ""}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </Card>
+
+          <Card {...cardProps} style={styles.card}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={styles.blockTitle}>Channels</Text>
+              <TouchableOpacity onPress={() => setCountryOpen((s) => !s)} style={styles.countryBtn}>
+                <Ionicons name="flag-outline" color="#fff" size={14} />
+                <Text style={styles.countryTxt}>{country}</Text>
+                <Ionicons name={countryOpen ? "chevron-up" : "chevron-down"} color="#fff" size={16} />
+              </TouchableOpacity>
+            </View>
+            {countryOpen &amp;&amp; (
+              <View style={styles.countryList}>
+                {COUNTRIES.map((c) => (
+                  <TouchableOpacity key={c} style={styles.countryItem} onPress={() => { setCountry(c); setCountryOpen(false); }}>
+                    <Ionicons name="flag-outline" color="#c7d1df" size={14} />
+                    <Text style={styles.countryItemTxt}>{c}</Text>
+                  </TouchableOpacity>
                 ))}
               </View>
-            ))
-          )}
-        </Card>
-      </ScrollView>
+            )}
+            <Text style={styles.channels}>{country}: {channels.length ? channels.join(", ") : "TBD"}</Text>
+          </Card>
 
-      {/* Admin JSON Modal */}
-      <Modal visible={adminModal.open} animationType="slide" onRequestClose={() => setAdminModal({ ...adminModal, open: false })}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-          <ScrollView style={{ flex: 1, backgroundColor: "#0a0a0f" }} contentContainerStyle={{ padding: 16 }}>
-            <Text style={{ color: "#fff", fontSize: 18, fontWeight: "800", marginBottom: 12 }}>Edit {adminModal.kind} JSON</Text>
-            <Text style={{ color: "#c7d1df", marginBottom: 8 }}>X-Admin-Token</Text>
-            <TextInput value={adminModal.token} onChangeText={(t) => setAdminModal({ ...adminModal, token: t })} style={[styles.input, { marginBottom: 10 }]} placeholder="CHANGEME" placeholderTextColor="#8a90a4" />
-            <TextInput value={adminModal.json} onChangeText={(t) => setAdminModal({ ...adminModal, json: t })} style={[styles.input, { minHeight: 240, textAlignVertical: "top" }]} multiline placeholder="{}" placeholderTextColor="#8a90a4" />
-            <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
-              <TouchableOpacity onPress={() => setAdminModal({ ...adminModal, open: false })} style={[styles.smallBtn, { backgroundColor: "#333" }]}><Text style={styles.smallBtnTxt}>Cancel</Text></TouchableOpacity>
-              <TouchableOpacity onPress={saveAdmin} style={styles.smallBtn}><Ionicons name="save-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Save</Text></TouchableOpacity>
+          <Card {...cardProps} style={styles.card}>
+            <Text style={styles.blockTitle}>Rate the match</Text>
+            <View style={styles.row}>
+              <TouchableOpacity onPress={() => rate(true)} style={[styles.btn, { backgroundColor: "#1a2" }]}><Ionicons name="thumbs-up-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Like</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => rate(false)} style={[styles.btn, { backgroundColor: "#a21" }]}><Ionicons name="thumbs-down-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Dislike</Text></TouchableOpacity>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
-    </KeyboardAvoidingView>
+            {!!rating &amp;&amp; <Text style={styles.voteLine}>Likes: {rating.likes} • Dislikes: {rating.dislikes} • {rating.likePct}% 👍</Text>}
+          </Card>
+
+          <Card {...cardProps} style={styles.card}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={styles.blockTitle}>Cast your vote</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {scheduled &amp;&amp; <Text style={styles.subtle}>Reminders scheduled</Text>}
+                <TouchableOpacity onPress={scheduleVoteReminders} style={styles.smallBtn}><Ionicons name="notifications-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Schedule</Text></TouchableOpacity>
+                <TouchableOpacity onPress={rescheduleReminders} style={styles.smallBtn}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Reschedule</Text></TouchableOpacity>
+                <TouchableOpacity onPress={cancelReminders} style={styles.smallBtn}><Ionicons name="close-circle-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Cancel</Text></TouchableOpacity>
+                <TouchableOpacity onPress={simulateFinish} style={styles.smallBtn}><Ionicons name="fast-forward-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Simulate finish</Text></TouchableOpacity>
+                <TouchableOpacity onPress={notifyTestAudience} style={styles.smallBtn}><Ionicons name="megaphone-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Notify test audience</Text></TouchableOpacity>
+              </View>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
+              {cats.map((c) => (
+                <TouchableOpacity key={c.key} onPress={() => setSelectedCat(c.key)} style={[styles.chip, selectedCat === c.key &amp;&amp; styles.chipActive]}>
+                  <Text style={[styles.chipTxt, selectedCat === c.key &amp;&amp; styles.chipTxtActive]}>{c.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <View style={{ height: 8 }} />
+            <TextInput placeholder="Player/fighter name" placeholderTextColor="#8a90a4" value={name} onChangeText={setName} style={styles.input} returnKeyType="send" onSubmitEditing={submitVote} />
+            <TouchableOpacity disabled={submitting || !name.trim()} onPress={submitVote} style={[styles.submit, (!name.trim() || submitting) &amp;&amp; { opacity: 0.6 }]}><Ionicons name="send-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>{submitting ? "Submitting..." : "Submit Vote"}</Text></TouchableOpacity>
+          </Card>
+
+          {match?.sport === "football" &amp;&amp; (
+            <Card {...cardProps} style={styles.card}>
+              <Text style={styles.blockTitle}>Player star ratings (10⭐ each)</Text>
+              <Text style={styles.voteLine}>Rate: {name || "(enter player name above)"}</Text>
+              <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Attack</Text><StarRow value={playerRatings.attack} onChange={(v) => setPlayerRatings((s) => ({ ...s, attack: v }))} /></View>
+              <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Defense</Text><StarRow value={playerRatings.defense} onChange={(v) => setPlayerRatings((s) => ({ ...s, defense: v }))} /></View>
+              <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Passing</Text><StarRow value={playerRatings.passing} onChange={(v) => setPlayerRatings((s) => ({ ...s, passing: v }))} /></View>
+              <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Dribbling</Text><StarRow value={playerRatings.dribbling} onChange={(v) => setPlayerRatings((s) => ({ ...s, dribbling: v }))} /></View>
+              <TouchableOpacity onPress={submitPlayerRatings} style={styles.submit}><Ionicons name="save-outline" size={18} color="#fff" /><Text style={styles.smallBtnTxt}>Submit Ratings</Text></TouchableOpacity>
+              {playerAvg &amp;&amp; (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={styles.voteLine}>Community averages (n={playerAvg.count}): A {playerAvg.averages.attack} • D {playerAvg.averages.defense} • P {playerAvg.averages.passing} • Dr {playerAvg.averages.dribbling} • Overall {playerAvg.overall}</Text>
+                </View>
+              )}
+            </Card>
+          )}
+
+          <Card {...cardProps} style={styles.card}>
+            <Text style={styles.blockTitle}>Fan voting (results)</Text>
+            {!votesData || Object.keys(votesData?.percentages || {}).length === 0 ? (
+              <Text style={styles.voteLine}>No votes yet</Text>
+            ) : (
+              Object.entries(votesData.percentages || {}).map(([cat, entries]: any) => (
+                <View key={cat} style={{ marginTop: 10 }}>
+                  <Text style={[styles.voteLine, { marginBottom: 6 }]}>{cat.replaceAll("_", " ")} • total {votesData.totals?.[cat] ?? 0}</Text>
+                  {Object.entries(entries as any).map(([player, pct]: any) => (
+                    <View key={player} style={styles.barRow}>
+                      <View style={styles.barBg}><View style={[styles.bar, { width: `${pct}%` }]} /></View>
+                      <Text style={styles.barTxt}>{player} — {pct}%</Text>
+                    </View>
+                  ))}
+                </View>
+              ))
+            )}
+          </Card>
+        </ScrollView>
+
+        {/* Admin JSON Modal */}
+        <Modal visible={adminModal.open} animationType="slide" onRequestClose={() => setAdminModal({ ...adminModal, open: false })}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+            <ScrollView style={{ flex: 1, backgroundColor: "#0a0a0f" }} contentContainerStyle={{ padding: 16 }}>
+              <Text style={{ color: "#fff", fontSize: 18, fontWeight: "800", marginBottom: 12 }}>Edit {adminModal.kind} JSON</Text>
+              <Text style={{ color: "c7d1df", marginBottom: 8 }}>X-Admin-Token</Text>
+              <TextInput value={adminModal.token} onChangeText={(t) => setAdminModal({ ...adminModal, token: t })} style={[styles.input, { marginBottom: 10 }]} placeholder="CHANGEME" placeholderTextColor="#8a90a4" />
+              <TextInput value={adminModal.json} onChangeText={(t) => setAdminModal({ ...adminModal, json: t })} style={[styles.input, { minHeight: 240, textAlignVertical: "top" }]} multiline placeholder="{}" placeholderTextColor="#8a90a4" />
+              <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
+                <TouchableOpacity onPress={() => setAdminModal({ ...adminModal, open: false })} style={[styles.smallBtn, { backgroundColor: "#333" }]}><Text style={styles.smallBtnTxt}>Cancel</Text></TouchableOpacity>
+                <TouchableOpacity onPress={saveAdmin} style={styles.smallBtn}><Ionicons name="save-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Save</Text></TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </Modal>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -456,7 +465,7 @@ function StatusChip({ status }: { status?: string }) {
     doubtful: { bg: "#3a331f", color: "#ffd59b", label: "Doubtful" },
     recovery: { bg: "#1f3a2b", color: "#95ffbf", label: "Recovery" },
   };
-  const st = status && map[status] ? map[status] : { bg: "#262b3a", color: "#c7d1df", label: status || "Status" };
+  const st = status &amp;&amp; map[status] ? map[status] : { bg: "#262b3a", color: "#c7d1df", label: status || "Status" };
   return (<View style={[styles.badge, { backgroundColor: st.bg }]}><Text style={[styles.badgeTxt, { color: st.color }]}>{st.label}</Text></View>);
 }
 

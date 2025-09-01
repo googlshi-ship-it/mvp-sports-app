@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, FlatList, Image, TouchableOpacity, RefreshControl, Platform, ToastAndroid, Alert } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { apiGet } from "../../src/api/client";
 
 function TypeBadge({ type }: { type?: string }) {
@@ -104,7 +105,13 @@ export default function CompetitionDetail() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <Stack.Screen
+        options={{
+          title: `Competition ${id ?? ""}`,
+          headerBackTitle: "Back",
+        }}
+      />
       <View style={styles.header}>
         {comp?.logoUrl ? (
           <Image source={{ uri: comp.logoUrl }} style={styles.logo} />
@@ -165,7 +172,7 @@ export default function CompetitionDetail() {
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
