@@ -304,7 +304,7 @@ export default function MatchDetails() {
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={styles.blockTitle}>Unavailable</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                {updatedInjuries &amp;&amp; <Text style={styles.subtle}>Updated {updatedInjuries.toLocaleTimeString()}</Text>}
+                {updatedInjuries && <Text style={styles.subtle}>Updated {updatedInjuries.toLocaleTimeString()}</Text>}
                 {ADMIN_ENABLED &amp;&amp; <TouchableOpacity onPress={() => openAdmin("injuries")} style={styles.smallBtn}><Ionicons name="create-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Edit JSON</Text></TouchableOpacity>}
               </View>
             </View>
