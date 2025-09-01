@@ -4,7 +4,7 @@ import GlassCard from "../../src/components/GlassCard";
 import { tokens } from "../../src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { apiGet, apiPost } from "../../src/api/client";
+import { apiGet, apiPost, RIVALRY_UI } from "../../src/api/client";
 
 type Team = { name: string };
 type Match = {
