@@ -346,7 +346,7 @@ export default function MatchDetails() {
                 <Ionicons name={countryOpen ? "chevron-up" : "chevron-down"} color="#fff" size={16} />
               </TouchableOpacity>
             </View>
-            {countryOpen &amp;&amp; (
+            {countryOpen && (
               <View style={styles.countryList}>
                 {COUNTRIES.map((c) => (
                   <TouchableOpacity key={c} style={styles.countryItem} onPress={() => { setCountry(c); setCountryOpen(false); }}>
@@ -365,14 +365,14 @@ export default function MatchDetails() {
               <TouchableOpacity onPress={() => rate(true)} style={[styles.btn, { backgroundColor: "#1a2" }]}><Ionicons name="thumbs-up-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Like</Text></TouchableOpacity>
               <TouchableOpacity onPress={() => rate(false)} style={[styles.btn, { backgroundColor: "#a21" }]}><Ionicons name="thumbs-down-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>Dislike</Text></TouchableOpacity>
             </View>
-            {!!rating &amp;&amp; <Text style={styles.voteLine}>Likes: {rating.likes} • Dislikes: {rating.dislikes} • {rating.likePct}% 👍</Text>}
+            {!!rating && <Text style={styles.voteLine}>Likes: {rating.likes} • Dislikes: {rating.dislikes} • {rating.likePct}% 👍</Text>}
           </Card>
 
           <Card {...cardProps} style={styles.card}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={styles.blockTitle}>Cast your vote</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                {scheduled &amp;&amp; <Text style={styles.subtle}>Reminders scheduled</Text>}
+                {scheduled && <Text style={styles.subtle}>Reminders scheduled</Text>}
                 <TouchableOpacity onPress={scheduleVoteReminders} style={styles.smallBtn}><Ionicons name="notifications-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Schedule</Text></TouchableOpacity>
                 <TouchableOpacity onPress={rescheduleReminders} style={styles.smallBtn}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Reschedule</Text></TouchableOpacity>
                 <TouchableOpacity onPress={cancelReminders} style={styles.smallBtn}><Ionicons name="close-circle-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Cancel</Text></TouchableOpacity>
@@ -382,17 +382,17 @@ export default function MatchDetails() {
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6 }}>
               {cats.map((c) => (
-                <TouchableOpacity key={c.key} onPress={() => setSelectedCat(c.key)} style={[styles.chip, selectedCat === c.key &amp;&amp; styles.chipActive]}>
-                  <Text style={[styles.chipTxt, selectedCat === c.key &amp;&amp; styles.chipTxtActive]}>{c.label}</Text>
+                <TouchableOpacity key={c.key} onPress={() => setSelectedCat(c.key)} style={[styles.chip, selectedCat === c.key && styles.chipActive]}>
+                  <Text style={[styles.chipTxt, selectedCat === c.key && styles.chipTxtActive]}>{c.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
             <View style={{ height: 8 }} />
             <TextInput placeholder="Player/fighter name" placeholderTextColor="#8a90a4" value={name} onChangeText={setName} style={styles.input} returnKeyType="send" onSubmitEditing={submitVote} />
-            <TouchableOpacity disabled={submitting || !name.trim()} onPress={submitVote} style={[styles.submit, (!name.trim() || submitting) &amp;&amp; { opacity: 0.6 }]}><Ionicons name="send-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>{submitting ? "Submitting..." : "Submit Vote"}</Text></TouchableOpacity>
+            <TouchableOpacity disabled={submitting || !name.trim()} onPress={submitVote} style={[styles.submit, (!name.trim() || submitting) && { opacity: 0.6 }]}><Ionicons name="send-outline" size={18} color="#fff" /><Text style={styles.btnTxt}>{submitting ? "Submitting..." : "Submit Vote"}</Text></TouchableOpacity>
           </Card>
 
-          {match?.sport === "football" &amp;&amp; (
+          {match?.sport === "football" && (
             <Card {...cardProps} style={styles.card}>
               <Text style={styles.blockTitle}>Player star ratings (10⭐ each)</Text>
               <Text style={styles.voteLine}>Rate: {name || "(enter player name above)"}</Text>
@@ -401,7 +401,7 @@ export default function MatchDetails() {
               <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Passing</Text><StarRow value={playerRatings.passing} onChange={(v) => setPlayerRatings((s) => ({ ...s, passing: v }))} /></View>
               <View style={styles.ratingRow}><Text style={styles.ratingLabel}>Dribbling</Text><StarRow value={playerRatings.dribbling} onChange={(v) => setPlayerRatings((s) => ({ ...s, dribbling: v }))} /></View>
               <TouchableOpacity onPress={submitPlayerRatings} style={styles.submit}><Ionicons name="save-outline" size={18} color="#fff" /><Text style={styles.smallBtnTxt}>Submit Ratings</Text></TouchableOpacity>
-              {playerAvg &amp;&amp; (
+              {playerAvg && (
                 <View style={{ marginTop: 10 }}>
                   <Text style={styles.voteLine}>Community averages (n={playerAvg.count}): A {playerAvg.averages.attack} • D {playerAvg.averages.defense} • P {playerAvg.averages.passing} • Dr {playerAvg.averages.dribbling} • Overall {playerAvg.overall}</Text>
                 </View>
@@ -465,7 +465,7 @@ function StatusChip({ status }: { status?: string }) {
     doubtful: { bg: "#3a331f", color: "#ffd59b", label: "Doubtful" },
     recovery: { bg: "#1f3a2b", color: "#95ffbf", label: "Recovery" },
   };
-  const st = status &amp;&amp; map[status] ? map[status] : { bg: "#262b3a", color: "#c7d1df", label: status || "Status" };
+  const st = status && map[status] ? map[status] : { bg: "#262b3a", color: "#c7d1df", label: status || "Status" };
   return (<View style={[styles.badge, { backgroundColor: st.bg }]}><Text style={[styles.badgeTxt, { color: st.color }]}>{st.label}</Text></View>);
 }
 
