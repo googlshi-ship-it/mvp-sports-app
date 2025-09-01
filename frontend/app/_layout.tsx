@@ -1,31 +1,22 @@
+import React from "react";
 import { Stack } from "expo-router";
-import { useColorScheme } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect } from "react";
-import { useAuth } from "../src/store/auth";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { tokens } from "../src/ui/theme";
 
 export default function RootLayout() {
-  const scheme = useColorScheme();
-  const rehydrate = useAuth((s) =&gt; s.rehydrate);
-
-  useEffect(() =&gt; {
-    rehydrate();
-  }, [rehydrate]);
-
   return (
-    <>
-      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+    <SafeAreaProvider>
+      <StatusBar style="light" />
       <Stack
         screenOptions={{
-          headerShown: true,
+          headerTransparent: true,
           headerTitleAlign: "center",
-          headerBackTitle: "Back",
-          headerTintColor: scheme === "dark" ? "#fff" : "#000",
-          headerStyle: {
-            backgroundColor: scheme === "dark" ? "#000" : "#fff",
-          },
+          headerTintColor: tokens.text,
+          headerTitleStyle: { color: tokens.text, fontWeight: "700" },
+          contentStyle: { backgroundColor: tokens.bg },
         }}
       />
-    </>
+    </SafeAreaProvider>
   );
 }

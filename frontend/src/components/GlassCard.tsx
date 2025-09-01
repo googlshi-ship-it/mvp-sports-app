@@ -1,30 +1,41 @@
 import React from "react";
-import { View, StyleSheet, Platform, ViewStyle } from "react-native";
+import { View, StyleSheet, ViewStyle } from "react-native";
 import { BlurView } from "expo-blur";
-import { useCardTokens } from "../theme";
+import { tokens } from "../ui/theme";
 
-interface Props {
-  children?: React.ReactNode;
-  style?: ViewStyle | ViewStyle[];
+type Props = {
+  children: React.ReactNode;
+  style?: ViewStyle;
   fixedHeight?: number;
-}
+  topGlow?: boolean;
+};
 
-export default function GlassCard({ children, style, fixedHeight }: Props) {
-  const tokens = useCardTokens();
-  const baseStyle = [styles.base, tokens.layout, tokens.glass, fixedHeight ? { height: fixedHeight } : null, style];
-
-  if (Platform.OS === "ios") {
-    return (
-      <BlurView style={baseStyle as any} intensity={tokens.blurIntensity} tint={tokens.isDark ? "dark" : "light"}>
-        {children}
-      </BlurView>
-    );
-  }
-  return <View style={baseStyle}>{children}</View>;
+export default function GlassCard({ children, style, fixedHeight, topGlow }: Props) {
+  return (
+    <View style={[styles.wrap, fixedHeight ? { height: fixedHeight } : null, style]}>
+      <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+      <View style={styles.inner}>{children}</View>
+      {topGlow ? <View style={styles.topGlow} /> : null}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  base: {
-    overflow: Platform.select({ ios: "visible", android: "hidden", default: "hidden" }) as any,
+  wrap: {
+    overflow: "hidden",
+    borderRadius: tokens.radius,
+    borderWidth: 1,
+    borderColor: tokens.cardBorder,
+    backgroundColor: tokens.cardBg,
+  },
+  inner: {
+    padding: tokens.spacing,
+  },
+  topGlow: {
+    position: "absolute",
+    left: 0, right: 0, top: 0, height: 38,
+    borderTopLeftRadius: tokens.radius,
+    borderTopRightRadius: tokens.radius,
+    backgroundColor: tokens.cardGlow,
   },
 });

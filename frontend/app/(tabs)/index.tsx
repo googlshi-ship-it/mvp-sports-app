@@ -1,50 +1,39 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, SectionList, RefreshControl, TouchableOpacity } from "react-native";
 import GlassCard from "../../src/components/GlassCard";
+import { tokens } from "../../src/ui/theme";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { apiGet, apiPost, RIVALRY_UI } from "../../src/api/client";
+import { apiGet, apiPost } from "../../src/api/client";
 
-const DEFAULT_COUNTRY = "CH";
-
-type Team = { type: "club" | "national"; name: string; countryCode?: string | null };
-
+type Team = { name: string };
 type Match = {
-  _id: string;
-  id: string;
-  sport: "football" | "basketball" | "ufc";
+  id: string; _id?: string;
   tournament: string;
   subgroup?: string | null;
-  homeTeam: Team;
-  awayTeam: Team;
+  homeTeam: Team; awayTeam: Team;
   startTime: string;
-  channelsForCountry?: string[];
+  sport?: "football" | "basketball" | "ufc";
+  rivalry?: { enabled: boolean; tag?: string };
 };
+
+const DEFAULT_COUNTRY = "CH";
 
 export default function MatchesScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [sections, setSections] = useState<any[]>([]);
 
-  const iconFor = (sport: Match["sport"]) => {
-    if (sport === "football") return <Ionicons name="football-outline" size={16} color="#8a7cff" />;
-    if (sport === "basketball") return <MaterialCommunityIcons name="basketball" size={16} color="#ff7c49" />;
-    return <MaterialCommunityIcons name="boxing-glove" size={16} color="#ff4d6d" />;
-  };
-
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const grouped = await apiGet(`/api/matches/grouped?country=${DEFAULT_COUNTRY}`);
-      const make = (key: string) => (grouped[key] || []).map((m: any) => ({ key: m.id, ...m }));
-      const s = [
-        { title: "Today", data: make("today") },
-        { title: "Tomorrow", data: make("tomorrow") },
-        { title: "This Week", data: make("week") },
-      ];
-      setSections(s);
-    } catch (e) {
-      console.warn(e);
+      const map = (key: string) => (grouped?.[key] || []).map((m: any) => ({ key: m.id, ...m }));
+      setSections([
+        { title: "Today", data: map("today") },
+        { title: "Tomorrow", data: map("tomorrow") },
+        { title: "This Week", data: map("week") },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -52,91 +41,79 @@ export default function MatchesScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-  const onImport = async () => {
-    try { await apiPost("/api/import/thesportsdb", { days: 3 }); await load(); } catch (e) { console.warn(e); }
-  };
+  const onImport = async () => { try { await apiPost("/api/import/thesportsdb", { days: 3 }); await load(); } catch {} };
 
-  const renderItem = ({ item }: { item: Match }) => {
+  const Card = ({ item }: { item: Match }) => {
     const time = new Date(item.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     return (
-      <TouchableOpacity
-        accessibilityLabel={RIVALRY_UI && (item as any)?.rivalry?.enabled ? "Rivalry match" : undefined}
-        activeOpacity={0.8}
-        onPress={() => router.push(`/match/${item.id}`)}
-        onLongPress={() => {
-          alert("Share / Add to Calendar / Copy Link coming soon");
-        }}
-      >
-        <GlassCard fixedHeight={172}>
-          {RIVALRY_UI && (item as any)?.rivalry?.enabled ? (
-            <View pointerEvents="none" style={styles.topGlow} />
-          ) : null}
-          <View style={styles.rowBetween}>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => router.push(`/match/${item._id || item.id}`)}>
+        <GlassCard fixedHeight={172} topGlow={!!item.rivalry?.enabled}>
+          <View style={styles.row}>
             <Text style={styles.time}>{time}</Text>
             <View style={styles.tournamentRow}>
-              {iconFor(item.sport)}
-              <Text style={styles.tournament} numberOfLines={1}> {item.tournament}</Text>
-              {RIVALRY_UI && (item as any)?.rivalry?.enabled ? (
-                <View style={styles.derbyChip}><Text style={styles.derbyTxt}>🔥 {(item as any)?.rivalry?.tag || "Derby"}</Text></View>
-              ) : null}
+              <Ionicons name="football-outline" size={16} color="#C9D1FF" />
+              <Text style={styles.tournament} numberOfLines={1}>  {item.tournament}</Text>
+              {item.rivalry?.enabled ? <Text style={styles.chip}>🔥 {item.rivalry?.tag || "Derby"}</Text> : null}
             </View>
           </View>
           {item.subgroup ? <Text style={styles.subgroup}>{item.subgroup}</Text> : null}
-          <View style={styles.teamsRow}>
-            <Text style={styles.team}>{item.homeTeam.name}</Text>
+          <View style={[styles.row, { marginTop: 10 }]}>
+            <Text style={styles.team} numberOfLines={1}>{item.homeTeam?.name}</Text>
             <Text style={styles.vs}> — </Text>
-            <Text style={styles.team}>{item.awayTeam.name}</Text>
+            <Text style={styles.team} numberOfLines={1}>{item.awayTeam?.name}</Text>
           </View>
-          <Text style={styles.channels} numberOfLines={1}>
-            Channels ({DEFAULT_COUNTRY}): {item.channelsForCountry?.join(", ") || "TBD"}
-          </Text>
+          <Text style={styles.channels} numberOfLines={1}>Channels ({DEFAULT_COUNTRY}): TBD</Text>
         </GlassCard>
       </TouchableOpacity>
     );
   };
 
-  const renderSectionHeader = ({ section }: any) => (
-    <Text style={styles.sectionHeader}>{section.title}</Text>
-  );
-
   return (
-    <View style={styles.container}>
+    <View style={styles.screen}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>MVP</Text>
+        <Text style={styles.h1}>MVP</Text>
         <TouchableOpacity onPress={onImport} style={styles.importBtn}>
           <Ionicons name="cloud-download-outline" color="#fff" size={18} />
           <Text style={styles.importTxt}>Import</Text>
         </TouchableOpacity>
       </View>
+
       <SectionList
         sections={sections}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        renderSectionHeader={renderSectionHeader}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
-        contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
+        keyExtractor={(i: Match) => i.id}
+        renderItem={({ item }) => <Card item={item} />}
+        renderSectionHeader={({ section }) => <Text style={styles.section}>{section.title}</Text>}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={tokens.brand} />}
+        contentContainerStyle={{ padding: tokens.spacing, paddingBottom: 120 }}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0a0a0f" },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16 },
-  title: { color: "#fff", fontSize: 28, fontWeight: "800" },
-  importBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#1f1b3a", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
+  screen: { flex: 1, backgroundColor: tokens.bg },
+  headerRow: {
+    paddingHorizontal: tokens.spacing, paddingTop: tokens.spacing, paddingBottom: 8,
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+  },
+  h1: { color: tokens.text, fontSize: 28, fontWeight: "800" },
+
+  importBtn: { flexDirection: "row", gap: 6, backgroundColor: "#1f1b3a",
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
   importTxt: { color: "#fff", fontWeight: "600" },
-  sectionHeader: { color: "#b8b8d4", fontSize: 14, marginTop: 8, marginBottom: 8, paddingHorizontal: 16 },
-  rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  time: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  tournamentRow: { flexDirection: "row", alignItems: "center" },
-  tournament: { color: "#ddd", fontSize: 14, maxWidth: 220 },
-  subgroup: { color: "#9aa3b2", marginTop: 4 },
-  teamsRow: { flexDirection: "row", alignItems: "center", marginTop: 10 },
-  team: { color: "#fff", fontSize: 18, fontWeight: "700" },
-  vs: { color: "#a0a0a0", marginHorizontal: 8 },
-  channels: { color: "#a6b1be", marginTop: 12, fontSize: 12 },
-  topGlow: { position: "absolute", top: 0, left: 0, right: 0, height: 40, backgroundColor: "rgba(255, 77, 109, 0.10)", borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  derbyChip: { backgroundColor: "rgba(255, 77, 109, 0.2)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, marginLeft: 8 },
-  derbyTxt: { color: "#ff4d6d", fontSize: 10, fontWeight: "600" },
+
+  section: { color: tokens.textDim, fontSize: 14, marginTop: 8, marginBottom: 8, paddingHorizontal: 2 },
+
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  time: { color: tokens.text, fontSize: 16, fontWeight: "700" },
+  tournamentRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  tournament: { color: "#DDE1F2", fontSize: 14, maxWidth: 190 },
+  chip: {
+    marginLeft: 8, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999,
+    backgroundColor: "rgba(255,77,109,0.18)", color: "#FFD6DD", overflow: "hidden", fontWeight: "800", fontSize: 12,
+  },
+  subgroup: { color: "#9AA3B2", marginTop: 4 },
+  team: { color: tokens.text, fontSize: 18, fontWeight: "800", flexShrink: 1 },
+  vs: { color: "#A0A0A0", marginHorizontal: 8, fontWeight: "600" },
+  channels: { color: "#A6B1BE", marginTop: 12, fontSize: 12 },
 });
