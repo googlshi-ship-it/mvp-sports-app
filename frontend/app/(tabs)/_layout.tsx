@@ -34,7 +34,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="index"
+        name="matches"
         options={{
           title: "Matches",
           headerTitleAlign: 'center',
