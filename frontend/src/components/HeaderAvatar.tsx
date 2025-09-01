@@ -1,12 +1,11 @@
 import React from "react";
-import { Pressable, View, StyleSheet, Alert } from "react-native";
+import { Pressable, View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 
 export default function HeaderAvatar() {
   const router = useRouter();
   const onPress = () => {
-    // Stub action per requirements: open a simple menu later; for now go to Settings
-    try { router.push("/settings"); } catch (e) { Alert.alert("Profile", "Profile modal coming soon"); }
+    router.push("/profile");
   };
   return (
     <Pressable accessibilityRole="button" hitSlop={12} onPress={onPress} style={styles.hitbox}>
