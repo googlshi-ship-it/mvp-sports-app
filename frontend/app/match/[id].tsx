@@ -239,7 +239,7 @@ export default function MatchDetails() {
           <View style={styles.header}>
             {sportIcon(match?.sport)}
             <Text style={styles.headerTxt}>{match?.tournament || "—"}</Text>
-            {RIVALRY_UI &amp;&amp; match?.rivalry?.enabled ? (
+            {RIVALRY_UI && match?.rivalry?.enabled ? (
               <View style={styles.derbyChip}><Text style={styles.derbyTxt}>🔥 {match?.rivalry?.tag || "Derby"}</Text></View>
             ) : null}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: "auto" }}>
