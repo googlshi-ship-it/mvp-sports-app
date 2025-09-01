@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, FlatList, TouchableOpacity, RefreshControl, Image, Platform, ToastAndroid, Alert } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { apiGet } from "../../src/api/client";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 function TypeBadge({ type }: { type?: string }) {
   const label = (type || "").toUpperCase();
@@ -67,7 +68,7 @@ export default function Competitions() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={["top","left","right","bottom"]} style={[styles.container, { backgroundColor: '#000' }]}> 
       {error ? (
         <View style={{ padding: 16 }}>
           <Text style={[styles.meta, { textAlign: "center", marginBottom: 8 }]}>{error}</Text>
@@ -79,17 +80,19 @@ export default function Competitions() {
         keyExtractor={(it) => it?._id || `${it?.name}-${it?.season}`}
         renderItem={renderItem}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        style={{ flex: 1, backgroundColor: '#000' }}
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}
+        contentInsetAdjustmentBehavior="automatic"
         ListEmptyComponent={<View><Text style={styles.empty}>No competitions</Text><Retry /></View>}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0a0a0f" },
-  center: { flex: 1, backgroundColor: "#0a0a0f", alignItems: "center", justifyContent: "center" },
+  container: { flex: 1 },
+  center: { flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center" },
   row: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
   logo: { width: 40, height: 40, borderRadius: 8, marginRight: 8 },
   name: { color: "#fff", fontWeight: "800" },

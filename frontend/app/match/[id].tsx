@@ -241,15 +241,18 @@ export default function MatchDetails() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0a0a0f" }} edges={["bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }} edges={["top","left","right","bottom"]}>
       <Stack.Screen
         options={{
           title: `Match ${id ?? ""}`,
           headerBackTitle: "Back",
+          headerStyle: { backgroundColor: '#000' },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center',
         }}
       />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-        <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 260 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}>
+        <ScrollView style={{ flex: 1, backgroundColor: '#000' }} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ paddingBottom: 260 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}>
           <View style={styles.header}>
             {sportIcon(match?.sport)}
             <Text style={styles.headerTxt}>{match?.tournament || "—"}</Text>
@@ -502,7 +505,7 @@ function StatusChip({ status }: { status?: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0a0a0f" },
+  container: { flex: 1, backgroundColor: '#000' },
   header: { flexDirection: "row", alignItems: "center", padding: 16, gap: 8, flexWrap: "wrap" },
   headerTxt: { color: "#fff", fontSize: 18, fontWeight: "800" },
   queueChip: { color: "#fff", backgroundColor: "#1f1b3a", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, overflow: "hidden", fontSize: 12 },
