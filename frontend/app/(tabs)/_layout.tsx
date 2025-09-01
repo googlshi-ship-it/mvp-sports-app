@@ -8,7 +8,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerTransparent: true,
+        headerTransparent: false,
         headerTitleAlign: "center",
         headerTintColor: tokens.text,
         headerRight: () => <HeaderAvatar />,

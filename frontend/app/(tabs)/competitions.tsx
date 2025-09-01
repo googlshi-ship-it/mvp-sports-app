@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, FlatList, TouchableOpacity, RefreshControl, Image, Platform, ToastAndroid, Alert } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { apiGet } from "../../src/api/client";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 function TypeBadge({ type }: { type?: string }) {
   const label = (type || "").toUpperCase();
@@ -67,7 +68,7 @@ export default function Competitions() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={["top","left","right"]} style={styles.container}>
       {error ? (
         <View style={{ padding: 16 }}>
           <Text style={[styles.meta, { textAlign: "center", marginBottom: 8 }]}>{error}</Text>
@@ -83,7 +84,7 @@ export default function Competitions() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}
         ListEmptyComponent={<View><Text style={styles.empty}>No competitions</Text><Retry /></View>}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -9,7 +9,6 @@ export default function RootLayout() {
   const rehydrate = useAuth((s) => s.rehydrate);
 
   useEffect(() => {
-    // Do not block UI; just rehydrate on mount
     rehydrate();
   }, [rehydrate]);
 
@@ -18,7 +17,8 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <Stack
         screenOptions={{
-          headerTransparent: true,
+          headerLargeTitle: false,
+          headerTransparent: false,
           headerTitleAlign: "center",
           headerTintColor: tokens.text,
           headerTitleStyle: { color: tokens.text, fontWeight: "700" },

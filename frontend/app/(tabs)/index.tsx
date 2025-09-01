@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, SectionList, RefreshControl, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import GlassCard from "../../src/components/GlassCard";
 import { tokens } from "../../src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -69,7 +70,7 @@ export default function MatchesScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView edges={["top","left","right"]} style={styles.screen}>
       <View style={styles.headerRow}>
         <Text style={styles.h1}>MVP</Text>
         <TouchableOpacity onPress={onImport} style={styles.importBtn}>
@@ -86,7 +87,7 @@ export default function MatchesScreen() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={tokens.brand} />}
         contentContainerStyle={{ padding: tokens.spacing, paddingBottom: 120 }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
