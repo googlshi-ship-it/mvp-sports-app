@@ -243,7 +243,7 @@ export default function MatchDetails() {
               <View style={styles.derbyChip}><Text style={styles.derbyTxt}>🔥 {match?.rivalry?.tag || "Derby"}</Text></View>
             ) : null}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: "auto" }}>
-              {queueCount !== null &amp;&amp; <Text style={styles.queueChip}>Queue {queueCount}</Text>}
+              {queueCount !== null && <Text style={styles.queueChip}>Queue {queueCount}</Text>}
               <TouchableOpacity onPress={onShare} style={[styles.smallBtn, { paddingVertical: 6, paddingHorizontal: 8 }]}>
                 <Ionicons name="share-outline" size={16} color="#fff" />
                 <Text style={styles.smallBtnTxt}>Share</Text>
