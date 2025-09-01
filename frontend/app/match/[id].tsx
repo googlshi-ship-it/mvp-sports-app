@@ -276,7 +276,7 @@ export default function MatchDetails() {
             {!!lineups?.formation_home || !!lineups?.formation_away ? (
               <Text style={[styles.subtle, { marginTop: 4 }]}>{lineups?.formation_home || "—"} vs {lineups?.formation_away || "—"}</Text>
             ) : null}
-            {!lineups || (!lineups.home?.starters?.length &amp;&amp; !lineups.away?.starters?.length &amp;&amp; !lineups.home?.bench?.length &amp;&amp; !lineups.away?.bench?.length) ? (
+            {!lineups || (!lineups.home?.starters?.length && !lineups.away?.starters?.length && !lineups.home?.bench?.length && !lineups.away?.bench?.length) ? (
               <View>
                 <Text style={styles.voteLine}>No lineups yet</Text>
                 <TouchableOpacity onPress={load} style={[styles.smallBtn, { marginTop: 8, alignSelf: "flex-start" }]}><Ionicons name="refresh-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Try again</Text></TouchableOpacity>
