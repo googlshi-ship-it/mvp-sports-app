@@ -211,7 +211,7 @@ export default function MatchDetails() {
       if (Platform.OS === "web") {
         // Web share
         // @ts-ignore
-        if (navigator &amp;&amp; navigator.share) {
+        if (navigator && navigator.share) {
           // @ts-ignore
           await navigator.share({ title: `${home} vs ${away}`, url, text: message });
           return;
