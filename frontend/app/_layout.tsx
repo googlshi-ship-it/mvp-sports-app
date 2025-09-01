@@ -1,31 +1,19 @@
-import React, { useEffect } from "react";
-import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { tokens } from "../src/ui/theme";
-import { useAuth } from "../src/store/auth";
+import React, { useEffect } from 'react';
+import { Stack } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useAuth } from '../src/store/auth';
 
 export default function RootLayout() {
   const rehydrate = useAuth((s) => s.rehydrate);
 
   useEffect(() => {
+    // Keep auth persistence; non-blocking
     rehydrate();
   }, [rehydrate]);
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerLargeTitle: false,
-          headerTransparent: false,
-          headerTitleAlign: "center",
-          headerTintColor: '#fff',
-          headerStyle: { backgroundColor: '#000' },
-          headerTitleStyle: { color: '#fff', fontWeight: "700" },
-          contentStyle: { backgroundColor: '#000' },
-        }}
-      />
+      <Stack screenOptions={{ headerTransparent: false }} />
     </SafeAreaProvider>
   );
 }
