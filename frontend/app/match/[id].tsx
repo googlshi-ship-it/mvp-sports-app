@@ -41,7 +41,7 @@ const COUNTRIES = ["CH", "DE", "AT", "FR", "IT", "GB", "US", "GE", "ES", "GR"] a
 
 type CountryCode = typeof COUNTRIES[number];
 
-const ADMIN_ENABLED = (typeof __DEV__ !== "undefined" &amp;&amp; __DEV__) || (process.env.EXPO_PUBLIC_ADMIN_DEBUG === "1");
+const ADMIN_ENABLED = (typeof __DEV__ !== "undefined" && __DEV__) || (process.env.EXPO_PUBLIC_ADMIN_DEBUG === "1");
 
 export default function MatchDetails() {
   const { id } = useLocalSearchParams();
