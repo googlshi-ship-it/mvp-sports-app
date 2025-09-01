@@ -20,9 +20,10 @@ export default function RootLayout() {
           headerLargeTitle: false,
           headerTransparent: false,
           headerTitleAlign: "center",
-          headerTintColor: tokens.text,
-          headerTitleStyle: { color: tokens.text, fontWeight: "700" },
-          contentStyle: { backgroundColor: tokens.bg },
+          headerTintColor: '#fff',
+          headerStyle: { backgroundColor: '#000' },
+          headerTitleStyle: { color: '#fff', fontWeight: "700" },
+          contentStyle: { backgroundColor: '#000' },
         }}
       />
     </SafeAreaProvider>

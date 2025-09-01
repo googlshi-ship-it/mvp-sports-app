@@ -10,12 +10,13 @@ export default function TabsLayout() {
       screenOptions={{
         headerTransparent: false,
         headerTitleAlign: "center",
-        headerTintColor: tokens.text,
+        headerTintColor: '#fff',
+        headerStyle: { backgroundColor: '#000' },
         headerRight: () => <HeaderAvatar />,
         tabBarActiveTintColor: tokens.brand,
         tabBarInactiveTintColor: "#9AA3B2",
         tabBarStyle: {
-          backgroundColor: "#0B0B11",
+          backgroundColor: '#000',
           borderTopColor: "transparent",
           height: 64,
           paddingBottom: 10,
@@ -26,6 +27,9 @@ export default function TabsLayout() {
         name="competitions"
         options={{
           title: "Competitions",
+          headerTitleAlign: 'center',
+          headerStyle: { backgroundColor: '#000' },
+          headerTintColor: '#fff',
           tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
         }}
       />
@@ -33,6 +37,9 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Matches",
+          headerTitleAlign: 'center',
+          headerStyle: { backgroundColor: '#000' },
+          headerTintColor: '#fff',
           tabBarIcon: ({ color, size }) => <Ionicons name="trophy-outline" size={size} color={color} />,
         }}
       />

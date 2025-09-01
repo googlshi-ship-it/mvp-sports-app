@@ -105,39 +105,22 @@ export default function CompetitionDetail() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }} edges={["top","left","right","bottom"]}>
       <Stack.Screen
         options={{
           title: `Competition ${id ?? ""}`,
           headerBackTitle: "Back",
+          headerStyle: { backgroundColor: '#000' },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center',
         }}
       />
-      <View style={styles.header}>
-        {comp?.logoUrl ? (
-          <Image source={{ uri: comp.logoUrl }} style={styles.logo} />
-        ) : (
-          <View style={[styles.logo, { backgroundColor: "#101526" }]} />
-        )}
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{comp?.name || "—"}</Text>
-          <Text style={styles.meta}>
-            Season {comp?.season || "—"} • {comp?.countryCode || comp?.country || "—"}
-          </Text>
-        </View>
-        <TypeBadge type={comp?.type} />
-      </View>
-
-      {error ? (
-        <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
-          <Text style={[styles.meta, { textAlign: "center", marginBottom: 8 }]}>{error}</Text>
-          <Retry />
-        </View>
-      ) : null}
-
       <FlatList
         data={sections}
         keyExtractor={(s) => s.title}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ flex: 1, backgroundColor: '#000' }}
         renderItem={({ item: section }) => (
           <View style={{ marginBottom: 18 }}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
@@ -177,8 +160,8 @@ export default function CompetitionDetail() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0a0a0f" },
-  center: { flex: 1, backgroundColor: "#0a0a0f", alignItems: "center", justifyContent: "center" },
+  container: { flex: 1, backgroundColor: "#000" },
+  center: { flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center" },
   header: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16 },
   logo: { width: 48, height: 48, borderRadius: 8, marginRight: 8 },
   name: { color: "#fff", fontWeight: "800", fontSize: 18 },

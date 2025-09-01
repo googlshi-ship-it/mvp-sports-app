@@ -70,7 +70,7 @@ export default function MatchesScreen() {
   };
 
   return (
-    <SafeAreaView edges={["top","left","right"]} style={styles.screen}>
+    <SafeAreaView edges={["top","left","right","bottom"]} style={[styles.screen, { backgroundColor: '#000' }]}>
       <View style={styles.headerRow}>
         <Text style={styles.h1}>MVP</Text>
         <TouchableOpacity onPress={onImport} style={styles.importBtn}>
@@ -85,6 +85,8 @@ export default function MatchesScreen() {
         renderItem={({ item }) => <Card item={item} />}
         renderSectionHeader={({ section }) => <Text style={styles.section}>{section.title}</Text>}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={tokens.brand} />}
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ flex: 1, backgroundColor: '#000' }}
         contentContainerStyle={{ padding: tokens.spacing, paddingBottom: 120 }}
       />
     </SafeAreaView>
@@ -92,7 +94,7 @@ export default function MatchesScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: tokens.bg },
+  screen: { flex: 1 },
   headerRow: {
     paddingHorizontal: tokens.spacing, paddingTop: tokens.spacing, paddingBottom: 8,
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
