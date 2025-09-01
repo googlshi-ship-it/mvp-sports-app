@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import HeaderAvatar from '../../src/components/HeaderAvatar';
+import HeaderAvatar from '../../components/HeaderAvatar';
 
 export default function TabsLayout() {
   return (
