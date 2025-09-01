@@ -2,6 +2,7 @@ import React from "react";
 import { Tabs } from "expo-router";
 import { tokens } from "../../src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
+import HeaderAvatar from "../../src/components/HeaderAvatar";
 
 export default function TabsLayout() {
   return (
@@ -10,6 +11,7 @@ export default function TabsLayout() {
         headerTransparent: true,
         headerTitleAlign: "center",
         headerTintColor: tokens.text,
+        headerRight: () => <HeaderAvatar />,
         tabBarActiveTintColor: tokens.brand,
         tabBarInactiveTintColor: "#9AA3B2",
         tabBarStyle: {
@@ -32,20 +34,6 @@ export default function TabsLayout() {
         options={{
           title: "Competitions",
           tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="leaderboard"
-        options={{
-          title: "Leaderboard",
-          tabBarIcon: ({ color, size }) => <Ionicons name="medal-outline" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
         }}
       />
     </Tabs>
