@@ -269,7 +269,7 @@ export default function MatchDetails() {
               <Text style={styles.blockTitle}>Lineups</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 {statusBadge(lineups?.lineups_status)}
-                {updatedLineups &amp;&amp; <Text style={styles.subtle}>Updated {updatedLineups.toLocaleTimeString()}</Text>}
+                {updatedLineups && <Text style={styles.subtle}>Updated {updatedLineups.toLocaleTimeString()}</Text>}
                 {ADMIN_ENABLED &amp;&amp; <TouchableOpacity onPress={() => openAdmin("lineups")} style={styles.smallBtn}><Ionicons name="create-outline" size={16} color="#fff" /><Text style={styles.smallBtnTxt}>Edit JSON</Text></TouchableOpacity>}
               </View>
             </View>
