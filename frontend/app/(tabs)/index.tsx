@@ -53,7 +53,7 @@ export default function MatchesScreen() {
             <View style={styles.tournamentRow}>
               <Ionicons name="football-outline" size={16} color="#C9D1FF" />
               <Text style={styles.tournament} numberOfLines={1}>  {item.tournament}</Text>
-              {item.rivalry?.enabled ? <Text style={styles.chip}>🔥 {item.rivalry?.tag || "Derby"}</Text> : null}
+              {RIVALRY_UI && item.rivalry?.enabled ? <Text style={styles.chip}>🔥 {item.rivalry?.tag || "Derby"}</Text> : null}
             </View>
           </View>
           {item.subgroup ? <Text style={styles.subgroup}>{item.subgroup}</Text> : null}
