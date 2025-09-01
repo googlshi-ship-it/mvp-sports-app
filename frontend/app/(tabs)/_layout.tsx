@@ -26,26 +26,27 @@ export default function TabsLayout() {
           },
         }}
       >
-      <Tabs.Screen
-        name="competitions"
-        options={{
-          title: "Competitions",
-          headerTitleAlign: 'center',
-          headerStyle: { backgroundColor: '#000' },
-          headerTintColor: '#fff',
-          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="matches"
-        options={{
-          title: "Matches",
-          headerTitleAlign: 'center',
-          headerStyle: { backgroundColor: '#000' },
-          headerTintColor: '#fff',
-          tabBarIcon: ({ color, size }) => <Ionicons name="trophy-outline" size={size} color={color} />,
-        }}
-      />
-    </Tabs>
+        <Tabs.Screen
+          name="competitions"
+          options={{
+            title: "Competitions",
+            headerTitleAlign: 'center',
+            headerStyle: { backgroundColor: '#000' },
+            headerTintColor: '#fff',
+            tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="matches"
+          options={{
+            title: "Matches",
+            headerTitleAlign: 'center',
+            headerStyle: { backgroundColor: '#000' },
+            headerTintColor: '#fff',
+            tabBarIcon: ({ color, size }) => <Ionicons name="trophy-outline" size={size} color={color} />,
+          }}
+        />
+      </Tabs>
+    </>
   );
 }
