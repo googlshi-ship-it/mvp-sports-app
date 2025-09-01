@@ -47,7 +47,7 @@ export default function MatchesScreen() {
     const time = new Date(item.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     return (
       <TouchableOpacity activeOpacity={0.85} onPress={() => router.push(`/match/${item._id || item.id}`)}>
-        <GlassCard fixedHeight={172} topGlow={!!item.rivalry?.enabled}>
+        <GlassCard fixedHeight={172} topGlow={RIVALRY_UI && !!item.rivalry?.enabled}>
           <View style={styles.row}>
             <Text style={styles.time}>{time}</Text>
             <View style={styles.tournamentRow}>
