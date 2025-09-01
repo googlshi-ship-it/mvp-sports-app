@@ -438,25 +438,27 @@ export default function MatchDetails() {
             </View>
           )}
 
-          {/* Results - always visible */}
-          <Card {...cardProps} style={styles.card}>
-            <Text style={styles.blockTitle}>Fan voting (results)</Text>
-            {!votesData || Object.keys(votesData?.percentages || {}).length === 0 ? (
-              <Text style={styles.voteLine}>No votes yet</Text>
-            ) : (
-              Object.entries(votesData.percentages || {}).map(([cat, entries]: any) => (
-                <View key={cat} style={{ marginTop: 10 }}>
-                  <Text style={[styles.voteLine, { marginBottom: 6 }]}>{cat.replaceAll("_", " ")} • total {votesData.totals?.[cat] ?? 0}</Text>
-                  {Object.entries(entries as any).map(([player, pct]: any) => (
-                    <View key={player} style={styles.barRow}>
-                      <View style={styles.barBg}><View style={[styles.bar, { width: `${pct}%` }]} /></View>
-                      <Text style={styles.barTxt}>{player} — {pct}%</Text>
-                    </View>
-                  ))}
-                </View>
-              ))
-            )}
-          </Card>
+          {/* Results - only after match */}
+          {votingOpen && (
+            <Card {...cardProps} style={styles.card}>
+              <Text style={styles.blockTitle}>Fan voting (results)</Text>
+              {!votesData || Object.keys(votesData?.percentages || {}).length === 0 ? (
+                <Text style={styles.voteLine}>No votes yet</Text>
+              ) : (
+                Object.entries(votesData.percentages || {}).map(([cat, entries]: any) => (
+                  <View key={cat} style={{ marginTop: 10 }}>
+                    <Text style={[styles.voteLine, { marginBottom: 6 }]}>{cat.replaceAll("_", " ")} • total {votesData.totals?.[cat] ?? 0}</Text>
+                    {Object.entries(entries as any).map(([player, pct]: any) => (
+                      <View key={player} style={styles.barRow}>
+                        <View style={styles.barBg}><View style={[styles.bar, { width: `${pct}%` }]} /></View>
+                        <Text style={styles.barTxt}>{player} — {pct}%</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))
+              )}
+            </Card>
+          )}
         </ScrollView>
 
         {/* Admin JSON Modal */}
