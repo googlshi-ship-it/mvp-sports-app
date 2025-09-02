@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const KEY = 'preferred_competition_id';
+const KEY = 'pref:competitionId';
 
-export async function saveCompetitionPref(id: string) {
-  try { await AsyncStorage.setItem(KEY, id); } catch {}
+export async function savePreferredCompetitionId(id: number) {
+  await AsyncStorage.setItem(KEY, String(id));
 }
 
-export async function getCompetitionPref(): Promise<string | null> {
-  try { return await AsyncStorage.getItem(KEY); } catch { return null; }
+export async function getPreferredCompetitionId(): Promise<number | null> {
+  const v = await AsyncStorage.getItem(KEY);
+  return v ? Number(v) : null;
 }

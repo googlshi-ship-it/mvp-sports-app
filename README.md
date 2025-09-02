@@ -1,29 +1,22 @@
-# Sports MVP – Public Demo
+# MVP-app
 
-Quick test steps
-- Backend endpoints of interest:
-  - GET /api/health → { ok: true }
-  - GET /api/version → { version, gitSha }
-  - GET /api/competitions
-  - GET /api/competitions/{id}/matches?tz=Europe/Madrid
-  - GET /api/matches/{id}?include=lineups&amp;tz=Europe/Madrid
-  - POST /api/auth/login → demo@demo.com / Demo123!
-  - POST /api/matches/{id}/vote (requires Authorization: Bearer)
+## Frontend (Expo)
 
-Login and vote
-1. Login with demo@demo.com / Demo123!
-2. Open a seeded match (football/basketball/UFC) from competitions or matches list.
-3. For football, try Lineups/Unavailable cards, and cast votes in categories (MVP, scorer…).
-4. Player star ratings (football only) use the Player name field.
+### Запуск с данными (Football-Data.org)
+1. Зарегистрируйтесь на https://www.football-data.org/ и скопируйте API Token (бесплатный план).
+2. Создайте файл `frontend/.env` и пропишите:
+   ```
+   EXPO_PUBLIC_FD_API_TOKEN=ВАШ_ТОКЕН
+   ```
+3. Установите зависимости и запустите:
+   ```bash
+   cd frontend
+   npm install
+   npx expo install @react-native-async-storage/async-storage
+   npx expo start --clear --host lan
+   ```
 
-Lineups & injuries
-- Lineups card shows formations, starters and bench for both teams.
-- Unavailable card shows Out/Doubtful/Recovery chips and reason.
-- In dev builds, an Edit JSON button allows admin overrides (X-Admin-Token).
-
-Environment
-- See backend/.env.example for required variables.
-- THESPORTSDB_API_KEY defaults to 1 if not provided. Import endpoint is tolerant and returns friendly JSON.
-
-Expo Frontend
-- Set EXPO_PUBLIC_BACKEND_URL to your deployed backend HTTPS URL before publishing web/Go.
+Примечания:
+- Если токен не задан или лимит превышен, приложение покажет демо-данные.
+- Роутинг: две вкладки (competitions, matches), без дубликатов файлов.
+- Тёмная тема, без белых полос. StatusBar светлый.
