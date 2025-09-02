@@ -64,6 +64,18 @@ export async function listMatches(opts: { competitionId?: number; dateFrom?: str
   }
 }
 
+export const LEAGUE_ORDER: number[] = [2001, 2021, 2014, 2019, 2002, 2015]; // UCL, PL, LaLiga, SerieA, Bundesliga, Ligue1
+
+export function sortCompetitionsByStrength(list: Competition[]): Competition[] {
+  const rank = new Map(LEAGUE_ORDER.map((id, i) => [id, i]));
+  return [...list].sort((a, b) => {
+    const ra = rank.has(a.id) ? (rank.get(a.id) as number) : 999;
+    const rb = rank.has(b.id) ? (rank.get(b.id) as number) : 999;
+    if (ra !== rb) return ra - rb;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 // ---- DEMO (на случай отсутствия токена) ----
 const DEMO_COMPETITIONS: Competition[] = [
   { id: 2001, name: 'UEFA Champions League', area: { name: 'Europe', code: 'EUR' } },
