@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, FlatList, Pressable, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { listCompetitions, Competition } from '../../../lib/footballData';
+import { listCompetitions, Competition, sortCompetitionsByStrength } from '../../../lib/footballData';
 import { savePreferredCompetitionId } from '../../../lib/competitionPref';
 
 export default function CompetitionsScreen() {
@@ -12,7 +12,7 @@ export default function CompetitionsScreen() {
   useEffect(() => {
     (async () => {
       const comps = await listCompetitions();
-      setData(comps);
+      setData(sortCompetitionsByStrength(comps));
       setLoading(false);
     })();
   }, []);
