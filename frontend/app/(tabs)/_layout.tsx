@@ -24,11 +24,7 @@ export default function TabsLayout() {
           name="matches"
           options={{ title: 'Matches', tabBarIcon: ({ color, size }) => <Ionicons name="trophy-outline" size={size} color={color} /> }}
         />
-        <Tabs.Screen name="leaderboard" options={{ href: null }} />
-        <Tabs.Screen name="settings" options={{ href: null }} />
-        <Tabs.Screen name="teams" options={{ href: null }} />
-        <Tabs.Screen name="profile" options={{ href: null }} />
       </Tabs>
-    </SafeAreaView>
+    </>
   );
 }
