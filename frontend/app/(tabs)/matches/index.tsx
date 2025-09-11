@@ -1,72 +1,73 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
-import { listMatches, Match, todayRange } from '../../../lib/footballData';
-import { getPreferredCompetitionId } from '../../../lib/competitionPref';
+import { View, Text, ActivityIndicator, SectionList, Platform, ToastAndroid, Alert } from 'react-native';
+import { fetchMatches, formatISODate, type LeagueSection } from '../../../lib/api';
+import MatchCard from '../../../components/MatchCard';
 
-function timeHM(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+function todayISO() {
+  return formatISODate(new Date());
 }
 
 export default function MatchesScreen() {
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [sections, setSections] = useState<LeagueSection[]>([]);
   const [loading, setLoading] = useState(true);
-  const [compId, setCompId] = useState<number | null>(null);
-  const router = useRouter();
+  const [hint, setHint] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const id = await getPreferredCompetitionId();
-      setCompId(id);
-      const range = todayRange();
-      const data = await listMatches({ competitionId: id ?? undefined, ...range });
-      setMatches(data);
-      setLoading(false);
+      try {
+        setLoading(true);
+        const key = process.env.EXPO_PUBLIC_FD_API_KEY;
+        const data = await fetchMatches({ dateISO: todayISO(), sport: 'football' });
+        setSections(data);
+        if (!key) {
+          setHint('Добавьте ключ EXPO_PUBLIC_FD_API_KEY в frontend/.env');
+        } else if (data.length === 0) {
+          setHint('No matches for this date or API rate limit.');
+        } else {
+          setHint(null);
+        }
+      } catch (e: any) {
+        const msg = (e?.message || 'Failed to load').toString();
+        if (Platform.OS === 'android') ToastAndroid.show(msg, ToastAndroid.SHORT); else Alert.alert(msg);
+        setHint('Temporary issue fetching matches.');
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flex:1, backgroundColor:'#000', alignItems:'center', justifyContent:'center' }}>
         <ActivityIndicator />
       </View>
     );
   }
 
-  if (!compId && matches.length === 0) {
+  if (sections.length === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Text style={{ color: '#fff', marginBottom: 12, textAlign: 'center' }}>
-          Выберите соревнование на вкладке “Competitions”
-        </Text>
-        <Pressable onPress={() => router.push('/(tabs)/competitions')} style={{ padding: 12, backgroundColor: '#4c4cff', borderRadius: 10 }}>
-          <Text style={{ color: '#fff', fontWeight: '600' }}>Открыть Competitions</Text>
-        </Pressable>
+      <View style={{ flex:1, backgroundColor:'#000', alignItems:'center', justifyContent:'center', padding:24 }}>
+        <Text style={{ color:'#fff', fontSize:16, textAlign:'center' }}>{hint || 'No matches for this date.'}</Text>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#000', padding: 12 }}>
-      <FlatList
-        data={matches}
-        keyExtractor={(m) => String(m.id)}
-        renderItem={({ item }) => (
-          <View style={{ backgroundColor: '#111', padding: 16, borderRadius: 12, marginBottom: 10 }}>
-            <Text style={{ color: '#aaa', marginBottom: 6 }}>{timeHM(item.utcDate)} • {item.competition?.name}</Text>
-            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
-              {item.homeTeam.name} — {item.awayTeam.name}
-            </Text>
-            {item.score?.fullTime && (item.score.fullTime.home != null || item.score.fullTime.away != null) ? (
-              <Text style={{ color: '#fff', marginTop: 4 }}>
-                Счёт: {item.score.fullTime.home ?? '-'} : {item.score.fullTime.away ?? '-'}
-              </Text>
-            ) : (
-              <Text style={{ color: '#888', marginTop: 4 }}>Ещё не начался</Text>
-            )}
+    <View style={{ flex:1, backgroundColor:'#000' }}>
+      <SectionList
+        sections={sections.map(s => ({ title: `${s.leagueName} • ${s.country}`, data: s.data }))}
+        keyExtractor={(item) => item.id}
+        renderSectionHeader={({ section }) => (
+          <View style={{ paddingHorizontal:16, paddingTop:16 }}>
+            <Text style={{ color:'#c7cbd6', fontWeight:'700' }}>{section.title}</Text>
           </View>
         )}
+        renderItem={({ item }) => (
+          <View style={{ paddingHorizontal:16, paddingTop:10 }}>
+            <MatchCard match={item} />
+          </View>
+        )}
+        contentContainerStyle={{ paddingBottom: 24 }}
       />
     </View>
   );

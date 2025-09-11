@@ -11,16 +11,27 @@ function timeHHMM(iso: string) {
 }
 
 export default function MatchCard({ match }: { match: Match }) {
+  const HomeLogo = match.home.logo ? (
+    <Image source={{ uri: match.home.logo }} style={s.logo} />
+  ) : (
+    <View style={[s.logo, s.logoPh]} />
+  );
+  const AwayLogo = match.away.logo ? (
+    <Image source={{ uri: match.away.logo }} style={s.logo} />
+  ) : (
+    <View style={[s.logo, s.logoPh]} />
+  );
+
   return (
     <View style={s.card}>
       <Text style={s.time}>{timeHHMM(match.utcDate)}</Text>
       <View style={s.teams}>
         <View style={s.row}>
-          {!!match.home.logo && <Image source={{ uri: match.home.logo }} style={s.logo} />}
+          {HomeLogo}
           <Text style={s.team} numberOfLines={1}>{match.home.name}</Text>
         </View>
         <View style={s.row}>
-          {!!match.away.logo && <Image source={{ uri: match.away.logo }} style={s.logo} />}
+          {AwayLogo}
           <Text style={s.teamMuted} numberOfLines={1}>{match.away.name}</Text>
         </View>
       </View>
@@ -34,6 +45,7 @@ const s = StyleSheet.create({
   teams: { flex: 1, gap: 6 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   logo: { width: 18, height: 18, borderRadius: 9, backgroundColor: '#222' },
+  logoPh: { backgroundColor: '#222' },
   team: { color: colors.text, fontSize: 16, fontWeight: '600' },
   teamMuted: { color: colors.muted, fontSize: 14 },
 });
