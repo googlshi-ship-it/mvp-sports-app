@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, SectionList, Platform, ToastAndroid, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchMatches, formatISODate, type LeagueSection } from '../../../lib/api';
 import MatchCard from '../../../components/MatchCard';
 
@@ -38,37 +39,43 @@ export default function MatchesScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex:1, backgroundColor:'#000', alignItems:'center', justifyContent:'center' }}>
-        <ActivityIndicator />
-      </View>
+      <SafeAreaView style={{ flex:1, backgroundColor:'#000' }} edges={['top','bottom']}>
+        <View style={{ flex:1, alignItems:'center', justifyContent:'center' }}>
+          <ActivityIndicator />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (sections.length === 0) {
     return (
-      <View style={{ flex:1, backgroundColor:'#000', alignItems:'center', justifyContent:'center', padding:24 }}>
-        <Text style={{ color:'#fff', fontSize:16, textAlign:'center' }}>{hint || 'No matches for this date.'}</Text>
-      </View>
+      <SafeAreaView style={{ flex:1, backgroundColor:'#000' }} edges={['top','bottom']}>
+        <View style={{ flex:1, alignItems:'center', justifyContent:'center', padding:24 }}>
+          <Text style={{ color:'#fff', fontSize:16, textAlign:'center' }}>{hint || 'No matches for this date.'}</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={{ flex:1, backgroundColor:'#000' }}>
-      <SectionList
-        sections={sections.map(s => ({ title: `${s.leagueName} • ${s.country}`, data: s.data }))}
-        keyExtractor={(item) => item.id}
-        renderSectionHeader={({ section }) => (
-          <View style={{ paddingHorizontal:16, paddingTop:16 }}>
-            <Text style={{ color:'#c7cbd6', fontWeight:'700' }}>{section.title}</Text>
-          </View>
-        )}
-        renderItem={({ item }) => (
-          <View style={{ paddingHorizontal:16, paddingTop:10 }}>
-            <MatchCard match={item} />
-          </View>
-        )}
-        contentContainerStyle={{ paddingBottom: 24 }}
-      />
-    </View>
+    <SafeAreaView style={{ flex:1, backgroundColor:'#000' }} edges={['top','bottom']}>
+      <View style={{ flex:1 }}>
+        <SectionList
+          sections={sections.map(s => ({ title: `${s.leagueName} • ${s.country}`, data: s.data }))}
+          keyExtractor={(item) => item.id}
+          renderSectionHeader={({ section }) => (
+            <View style={{ paddingHorizontal:16, paddingTop:16 }}>
+              <Text style={{ color:'#c7cbd6', fontWeight:'700' }}>{section.title}</Text>
+            </View>
+          )}
+          renderItem={({ item }) => (
+            <View style={{ paddingHorizontal:16, paddingTop:10 }}>
+              <MatchCard match={item} />
+            </View>
+          )}
+          contentContainerStyle={{ paddingBottom: 24 }}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
