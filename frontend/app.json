@@ -9,7 +9,7 @@
     "runtimeVersion": {
       "policy": "sdkVersion"
     },
-    "jsEngine": "jsc",
+    "jsEngine": "hermes",
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
