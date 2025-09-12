@@ -9,14 +9,15 @@
     "runtimeVersion": {
       "policy": "sdkVersion"
     },
-    "jsEngine": "hermes",
     "ios": {
+      "jsEngine": "jsc",
       "supportsTablet": true,
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": true
       }
     },
     "android": {
+      "jsEngine": "jsc",
       "backgroundColor": "#000000",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
