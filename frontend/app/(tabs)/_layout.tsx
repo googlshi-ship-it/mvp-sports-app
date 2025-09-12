@@ -1,26 +1,19 @@
 import { Tabs } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import HeaderAvatar from '../../components/HeaderAvatar';
+import React from 'react';
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerTitleAlign: 'center',
         headerStyle: { backgroundColor: '#000' },
         headerTintColor: '#fff',
-        tabBarStyle: { backgroundColor: '#000', borderTopColor: 'transparent', height: 64, paddingBottom: 10 },
-        headerRight: () => <HeaderAvatar />,
+        tabBarStyle: { backgroundColor: '#000' },
+        tabBarActiveTintColor: '#3b82f6',
+        tabBarInactiveTintColor: '#999',
       }}
     >
-      <Tabs.Screen
-        name="competitions"
-        options={{ title: 'Competitions', tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} /> }}
-      />
-      <Tabs.Screen
-        name="matches"
-        options={{ title: 'Matches', tabBarIcon: ({ color, size }) => <Ionicons name="trophy-outline" size={size} color={color} /> }}
-      />
+      <Tabs.Screen name="competitions" options={{ title: 'Competitions' }} />
+      <Tabs.Screen name="matches" options={{ title: 'Matches' }} />
     </Tabs>
   );
 }

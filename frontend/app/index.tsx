@@ -1,25 +1,16 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Link } from 'expo-router';
+import { View, Text, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 
 export default function Index() {
+  const router = useRouter();
   return (
-    <View style={s.container}>
-      <Text style={s.title}>MVP Arena</Text>
-      <Text style={s.subtitle}>SDK 54 • Preview Channel</Text>
-      <Link href="/(tabs)/competitions" asChild>
-        <TouchableOpacity style={s.btn}>
-          <Text style={s.btnText}>Enter app</Text>
-        </TouchableOpacity>
-      </Link>
+    <View style={{ flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: '#fff', fontSize: 28, marginBottom: 24 }}>MVP Arena</Text>
+      <Pressable onPress={() => router.replace('/(tabs)/competitions')}
+        style={{ backgroundColor: '#4c5cff', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 }}>
+        <Text style={{ color: '#fff', fontSize: 16 }}>Enter app</Text>
+      </Pressable>
     </View>
   );
 }
-
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  title: { color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 8 },
-  subtitle: { color: '#9AA3B2', marginBottom: 20 },
-  btn: { backgroundColor: '#1e90ff', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, minWidth: 160, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: '700' },
-});
