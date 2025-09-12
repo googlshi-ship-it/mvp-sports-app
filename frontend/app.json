@@ -8,6 +8,7 @@
     "runtimeVersion": {
       "policy": "sdkVersion"
     },
+    "jsEngine": "jsc",
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
