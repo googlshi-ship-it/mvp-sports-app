@@ -5,7 +5,9 @@
     "owner": "mvpapp",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#000000",
-    "runtimeVersion": { "policy": "sdkVersion" },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -20,6 +22,15 @@
       }
     },
     "icon": "./assets/icon.png",
-    "splash": { "image": "./assets/splash.png", "resizeMode": "contain", "backgroundColor": "#000000" }
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9913f18b-bb99-4928-9ea7-fff86bc2e7ac"
+      }
+    }
   }
 }
