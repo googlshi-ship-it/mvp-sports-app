@@ -2,8 +2,10 @@
   "expo": {
     "name": "MVP-app",
     "slug": "mvp-app",
+    "owner": "mvpapp",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#000000",
+    "runtimeVersion": { "policy": "sdkVersion" },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
