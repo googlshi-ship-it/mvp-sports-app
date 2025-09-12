@@ -1,16 +1,17 @@
 <analysis>
-The AI engineer successfully built an MVP sports mobile application, moving from a basic concept to a feature-rich platform. Initial work focused on a FastAPI backend with MongoDB and an Expo frontend, establishing core functionalities like match listings, fan voting with a 24-hour window, and user authentication. Subsequent development introduced structured competitions, lineup/injury details, and robust backend endpoints with timezone handling. A major UI/UX overhaul was implemented, adhering to a strict glassmorphism design system, including global card styling, typography, and a new header profile navigation. Most recently, the engineer integrated a Rivalry feature (backend model, admin API, UI accents), a cross-platform Share action, updated Expo package dependencies to resolve warnings, and prepared the project for one-click Render deployment and Expo publish. Persistent challenges with automated UI screenshot capture in the dev environment were noted, leading to the use of design-faithful mock screenshots. The project is now ready for deployment and final visual verification.
+The trajectory details the evolution of an MVP sports mobile app from its initial AI-driven creation to ongoing development. Initially, the focus was on a FastAPI backend, MongoDB, and Expo frontend, establishing core features like match listings, fan voting, user authentication, and a Rivalry feature. Subsequent work involved significant UI/UX overhauls, including a glassmorphism design, safe area handling, and a refined tab navigation. Recurring challenges included HTML-escaped characters, routing conflicts (Unmatched Route), and consistent status bar appearance on iOS. The AI engineer repeatedly addressed these, often in response to detailed, sometimes monolithic, user instructions or bug reports. The most recent efforts centered on integrating a live football data feed (Football-Data.org) and resolving critical publishing issues to Expo.dev, which ultimately failed due to an  command error.
 </analysis>
 
 <product_requirements>
-The MVP mobile application is a full-stack Expo/FastAPI/MongoDB solution for sports enthusiasts, covering:
-1.  **Match Display & Interaction**: View matches grouped by date, access detailed match information, select multi-country TV channels, participate in fan voting (like/dislike, MVP, scorer) with a strict 24-hour window, and set push notification reminders.
-2.  **User System**: User registration/login (email/password), JWT authentication, user scoring based on vote alignment, and a leaderboard of top 20 users. All voting requires authentication.
-3.  **Content Structure**: Support for Competitions (Leagues, Cups) with details like name, country, season. Match details include formations, starters, bench, and unavailable players (injuries/suspensions), editable by admin. Users can list favorite teams.
-4.  **Personalization & Admin**: Settings for default country, theme (Light/Dark), reminder cadences, Display clubs like national teams, Reduce effects, 12h vote reminder. An Admin Debug panel provides tools like notification management and Force Demo Mode.
-5.  **UI/UX**: Modern iOS-inspired glassmorphism design, light/dark themes, strict global card layout (margins, padding, border radius, glass styles, fixed heights), and defined typography. Profile access shifted from bottom tabs to a top-right avatar modal.
-6.  **Deployment**: One-click Render Blueprint for FastAPI backend and Expo Web static site, utilizing MongoDB Atlas, including health/version endpoints and seeded demo data.
-7.  **New Features**: Implementation of a Rivalry feature for matches (backend model, admin endpoint, UI chip/glow/accessibility label) and a cross-platform Share action for match details.
+The MVP mobile application is a full-stack Expo/FastAPI/MongoDB solution for sports enthusiasts. Key features include:
+
+1.  **Match Display & Interaction**: View matches grouped by date, access detailed match information, multi-country TV channels, fan voting (like/dislike, MVP, scorer) with a 24-hour window, and push notifications. Voting is now hidden until after the match ends.
+2.  **User System**: Registration/login (email/password), JWT authentication, user scoring, and a leaderboard. All voting requires authentication.
+3.  **Content Structure**: Support for Competitions (Leagues, Cups) with details, match details (formations, players), and favorite teams. New: Live feed for football matches from Football-Data.org, with preferred competition saving and sorting by league strength.
+4.  **Personalization & Admin**: Settings for country, theme (Light/Dark), reminders, Display clubs like national teams, Reduce effects. Admin Debug panel.
+5.  **UI/UX**: Modern iOS-inspired glassmorphism, light/dark themes, strict global card layout, defined typography. Profile/Settings moved from bottom tabs to a top-right avatar modal. The app ensures proper iOS/Android safe area handling, dark theme consistency, and a clean, two-tab navigation (Competitions, Matches).
+6.  **Deployment**: One-click Render Blueprint for backend/frontend. Publishing to Expo.dev via  or EAS Update.
+7.  **New Features**: Rivalry feature (backend model, admin endpoint, UI chip/glow/accessibility label), cross-platform Share action.
 </product_requirements>
 
 <key_technical_concepts>
@@ -22,70 +23,66 @@ The MVP mobile application is a full-stack Expo/FastAPI/MongoDB solution for spo
 -   JWT, bcrypt (Authentication/Security)
 -   Render, MongoDB Atlas (Cloud hosting)
 -   Glassmorphism (UI design)
--   TheSportsDB (External data)
--   , 
+-   Football-Data.org (External live data)
+-   , , , , 
 </key_technical_concepts>
 
 <code_architecture>
-The project adheres to a full-stack architecture with distinct  (Expo) and  (FastAPI) directories.
+The project uses a full-stack architecture with  (Expo) and  (FastAPI) directories.
 
 
 
--   : The core FastAPI application.
-    -   **Summary**: Handles all API logic for matches, competitions, users, and voting.
-    -   **Changes**:  model now includes . A new admin endpoint  was added to manage rivalry status, and seeded rivalries were included.
--   : Render Blueprint for deployment.
-    -   **Summary**: Defines configuration for deploying the FastAPI backend and Expo static frontend to Render.
-    -   **Changes**: Newly created with service definitions, build/start commands, health checks, and environment variable placeholders.
--   : Documentation for the Rivalry feature.
-    -   **Summary**: Outlines the backend schema, admin API usage, seeded data, and frontend UI considerations for the Rivalry feature.
-    -   **Changes**: Newly created.
--   : Frontend dependency manifest.
-    -   **Summary**: Manages all JavaScript dependencies for the Expo application.
-    -   **Changes**: Updated  to ,  to ,  to , and  pinned to .
--   : Expo app configuration.
-    -   **Summary**: Defines the Expo application's name, slug, and other build settings.
-    -   **Changes**: Placeholder name/slug were set for publish preparation, with instructions for the user to update.
--   : Main matches list screen.
-    -   **Summary**: Displays a list of matches in cards.
-    -   **Changes**: Implemented runtime Rivalry UI accents: a  chip with Derby or  next to the tournament label, a subtle top-edge red-orange glow, and  on the card. Gated by the  feature flag.
--   : Match details screen.
-    -   **Summary**: Provides comprehensive information for a specific match.
-    -   **Changes**: Implemented cross-platform Share functionality (native , web  with  fallback). Added the  chip and top-edge glow to the header area for rivalry matches, gated by .
--   : Competition details screen.
-    -   **Summary**: Displays details for a competition and its associated matches.
-    -   **Changes**: Long-press on match rows triggers a Share action similar to the Match Details screen.
--   : Centralized API client.
-    -   **Summary**: Handles all frontend calls to the FastAPI backend.
-    -   **Changes**: Exported the  feature flag, deriving its value from .
--   : UI theme definitions.
-    -   **Summary**: Stores global design tokens, colors, typography, and card styling.
-    -   **Changes**: Updated with detailed glassmorphism properties for global card styling, fixed card heights, and a defined typography scale.
--   : Directory for art assets.
-    -   **Summary**: Stores screenshots of the UI.
-    -   **Changes**: Contains six mock screenshots (Matches list, Competitions list, Match Details; light and dark themes), including a rivalry example, for visual validation.
+-   : FastAPI application for API logic (matches, competitions, users, voting).  includes  status, and an admin endpoint exists for management.
+-   : Render Blueprint for deployment, defining service, build, and environment configurations.
+-   : Documentation detailing the Rivalry feature.
+-   : Expo app configuration. Updated with , , , ,  (for iOS status bar control), and  paths/background.
+-   : Frontend dependency manifest. Updated dependencies like , , , , , , and . Added , , , , ,  scripts.
+-   : Stricter TypeScript configuration for the frontend.
+-   : Basic ESLint configuration for code quality checks.
+-   : GitHub Action for running frontend CI checks (checkout, setup-node, npm ci, expo install --fix, doctor, typecheck, lint) on pull requests.
+-   : Root layout for Expo Router. Handles global  style (light) and hides stack headers to avoid double padding (). Removed  from here to avoid double wrapping.
+-   : Layout for the tab-based navigation. Configured for two main tabs (Competitions, Matches). Sets dark header/tab bar styles,  with , and uses  to hide other potentially existing tab routes. Crucially, it no longer has an outer  or a duplicate .
+-   : Initial entry point. Redirects to  to prevent Unmatched Route errors.
+-   : Global error boundary, displaying a dark screen with a message for runtime errors instead of a red screen.
+-   : Match details screen. Implements cross-platform Share functionality, Rivalry UI accents (chip, top glow, accessibility label), and complex voting visibility logic (only shows voting UI after the match ends based on server flag or time-based fallback).
+-   : Competition details screen. Share action on long-press.
+-   : Displays a list of competitions fetched from Football-Data.org. Items are tappable to save preferred competition ID and navigate to the Matches screen. Uses a simple placeholder UI currently.
+-   : Displays today's matches for the saved preferred competition, using data from Football-Data.org. Includes a placeholder UI with navigation buttons. Handles loading and empty states (directing back to Competitions).
+-   : Profile screen, moved out of tabs and now accessible via . Simple placeholder.
+-   : Contains placeholder image assets (, , , ) to resolve Expo warnings.
+-   : Centralized API client. Exports  feature flag.
+-   : UI theme definitions for glassmorphism, typography, and card styling.
+-   : Reusable Glassmorphism card component, updated to use  and theme tokens, supports fixed height and top glow for rivalry.
+-   : Avatar component in the header, configured to navigate to  on press.
+-   : Component for displaying individual match details in lists, updated to show team logos from .
+-   : General API client for frontend. Now uses  for actual data fetching and sorts sections.
+-   : Helper for saving/getting the user's preferred competition ID using .
+-   : Football-Data.org API client. Fetches competitions and matches with a demo data fallback if API key is missing or rate limited. Includes  for sorting by league strength.
+-   : Defines the order of popular football leagues for sorting.
+-   : Example environment variables for frontend, including .
+-   : Updated with instructions for Football-Data.org API key setup and clean launch scripts.
 </code_architecture>
 
 <pending_tasks>
--   Publish the Expo frontend to Expo.dev using the user's account and credentials.
--   Re-capture 6 screenshots (Matches list, Competitions list, Match Details in light/dark themes) from the *deployed* (Render static site or Expo Go) UI to accurately reflect the implemented rivalry accents.
+-   Successfully publish the Expo frontend to Expo.dev (EAS Update) to provide a stable link/QR for the user. This requires resolving the  error.
+-   Integrate proper  wrappers within  and  (the placeholders) for absolute consistency, if not fully implemented in the final iteration.
 </pending_tasks>
 
 <current_work>
-The AI engineer has just completed the final integration of the Rivalry feature's UI accents and resolved most outstanding Expo package version warnings.
+Immediately before this summary request, the AI engineer was attempting to publish the application to Expo.dev using EAS Update, specifically the  branch (which contains the Football-Data.org integration) to the  channel. The user had provided an  for authentication and requested a QR code and Expo.dev link.
 
-Specifically:
--   **Rivalry UI Accents**:
-    -   In  (Matches list cards), a  chip (displaying Derby or ) and a subtle top-edge red-orange glow () have been implemented for rivalry matches. These visual elements are integrated within the  structure, maintaining all locked card metrics (margin, padding, border radius, fixed height of 172). An  has also been added to the card's .
-    -   Similarly, in  (Match Details header), the same  chip is now displayed next to the tournament name, and the subtle top-edge glow is present in the main header card area for rivalry matches. All big-card design tokens and sizes were strictly preserved.
-    -   Both implementations are controlled by the  feature flag, which is exported from  and defaults to .
--   **Expo Warning Cleanup**: The  file has been updated, bumping  to  and  to  (along with  and pinning ). This addressed the majority of version warnings in the development logs.
--   **Share Action Verification**: The cross-platform Share functionality, previously implemented in  and  (native , web  with  fallback and Link copied to clipboard toast), has been verified and remains functional.
--   **Expo Publish Preparation**: The  configuration is ready for an Expo publish, but the actual publishing step requires user  and  commands due to authentication requirements.
--   **Screenshots**: Six mock screenshots, representing the UI with the implemented rivalry accents in both light and dark themes, are saved under . Due to persistent dev server instability, real-time UI captures were not feasible in the current environment.
--   **Backend & Docs**: Backend rivalry endpoints (model, seeds, admin POST) were tested and passed, and  and  are up-to-date.
+However, the  command failed with an unknown or unexpected option: --token error, and subsequently, an account:login command failed. The user then asked how to continue the chat without losing data, prompting the AI engineer to escalate this to a support agent.
+
+The  branch, which was to be published, includes:
+-   **Football-Data.org Integration**: New modules (, , ) to fetch live football matches with a demo data fallback.
+-   **Match Display**: The  screen is updated to use this new API, displaying today's matches for a preferred competition, and handling empty states. The  displays team logos.
+-   **Competition Selection**:  fetches and sorts competitions, saving the user's choice.
+-   **Environment**:  and  are set up for .  includes setup instructions.
+-   **Assets**: Placeholder icons (, , ) were added to  to suppress Expo warnings.
+-   **Routing & Layout**: The app's routing structure (, ) is stabilized, ensuring two tabs (Competitions, Matches), correct  behavior, and  navigation to Profile.
+-   **Build & Lint**:  includes , , and various scripts, with a  GitHub Action for checks.
 </current_work>
 
 <optional_next_step>
-Push the entire project, including frontend, backend, , and other related files, to the provided GitHub repository.
+Relay the support agent's response to the user regarding how to continue the chat without losing data.
 </optional_next_step>

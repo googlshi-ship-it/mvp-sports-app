@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import sys
 
 # Base URL from frontend/.env EXPO_PUBLIC_BACKEND_URL
-BASE_URL = "https://mvp-arena.preview.emergentagent.com/api"
+BASE_URL = "https://rivalfootball.preview.emergentagent.com/api"
 
 def test_root_health():
     """Test GET /api/ - expect 200, JSON with {message}"""
