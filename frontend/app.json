@@ -3,6 +3,7 @@
     "name": "MVP-app",
     "slug": "mvp-app",
     "owner": "mvpapp",
+    "sdkVersion": "54.0.0",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#000000",
     "runtimeVersion": {
