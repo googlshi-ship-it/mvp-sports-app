@@ -5,7 +5,6 @@
   },
   "build": {
     "preview-apk": {
-      "env": { "JAVA_HOME": "/usr/lib/jvm/java-17-openjdk" },
       "android": {
         "buildType": "apk"
       },
