@@ -1,12 +1,19 @@
 {
-  "cli": { "version": ">= 6.0.0" },
+  "cli": {
+    "version": ">= 6.0.0"
+  },
   "build": {
     "preview-apk": {
-      "android": { "buildType": "apk" },
+      "android": {
+        "buildType": "apk"
+      },
       "developmentClient": false,
       "distribution": "internal",
-      "channel": "preview"
+      "channel": "preview",
+      "credentialsSource": "local"
     }
   },
-  "submit": { "android": {} }
+  "submit": {
+    "android": {}
+  }
 }
