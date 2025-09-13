@@ -18,11 +18,8 @@
     "android": {
       "package": "com.mvpapp.mobile",
       "jsEngine": "jsc",
-      "backgroundColor": "#000000",
-      "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#000000" }
+      "backgroundColor": "#000000"
     },
-    "icon": "./assets/icon.png",
-    "splash": { "image": "./assets/splash.png", "resizeMode": "contain", "backgroundColor": "#000000" },
     "extra": { "eas": { "projectId": "9913f18b-bb99-4928-9ea7-fff86bc2e7ac" } },
     "plugins": ["expo-router"]
   }
