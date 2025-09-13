@@ -1,4 +1,4 @@
-import 'react-native-gesture-handler'; // must be first
+import 'react-native-gesture-handler'; // MUST be first import
 import React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
