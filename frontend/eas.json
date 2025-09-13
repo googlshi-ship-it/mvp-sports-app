@@ -12,6 +12,15 @@
       "distribution": "internal",
       "channel": "preview",
       "credentialsSource": "local"
+    },
+    "preview-aab": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "developmentClient": false,
+      "distribution": "internal",
+      "channel": "preview",
+      "credentialsSource": "local"
     }
   },
   "submit": {
