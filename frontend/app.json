@@ -1,49 +1,29 @@
 {
   "expo": {
-    "name": "MVP-app",
+    "name": "MVP App",
     "slug": "mvp-app",
     "owner": "mvpapp",
+    "scheme": "mvpapp",
     "sdkVersion": "54.0.0",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#000000",
-    "runtimeVersion": {
-      "policy": "sdkVersion"
-    },
+    "runtimeVersion": { "policy": "sdkVersion" },
+    "updates": { "enabled": true, "fallbackToCacheTimeout": 0, "url": "https://u.expo.dev/9913f18b-bb99-4928-9ea7-fff86bc2e7ac" },
     "ios": {
+      "bundleIdentifier": "com.mvpapp.mobile",
       "jsEngine": "jsc",
       "supportsTablet": true,
-      "infoPlist": {
-        "UIViewControllerBasedStatusBarAppearance": true
-      }
+      "infoPlist": { "UIViewControllerBasedStatusBarAppearance": true }
     },
     "android": {
+      "package": "com.mvpapp.mobile",
       "jsEngine": "jsc",
       "backgroundColor": "#000000",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
-      }
+      "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#000000" }
     },
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "9913f18b-bb99-4928-9ea7-fff86bc2e7ac"
-      }
-    },
-    "updates": {
-      "enabled": true,
-      "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/9913f18b-bb99-4928-9ea7-fff86bc2e7ac"
-    },
-    "plugins": [
-      "expo-font",
-      "expo-router",
-      "expo-web-browser"
-    ]
+    "splash": { "image": "./assets/splash.png", "resizeMode": "contain", "backgroundColor": "#000000" },
+    "extra": { "eas": { "projectId": "9913f18b-bb99-4928-9ea7-fff86bc2e7ac" } },
+    "plugins": ["expo-router"]
   }
 }
