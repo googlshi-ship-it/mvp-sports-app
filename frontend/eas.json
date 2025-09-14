@@ -3,7 +3,8 @@
   "build": {
     "a55-apk": {
       "android": { "buildType": "apk" },
-      "channel": "production"
+      "channel": "production",
+      "env": { "NODE_ENV": "production" }
     }
   }
 }
