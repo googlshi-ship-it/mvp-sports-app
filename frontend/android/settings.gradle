@@ -5,6 +5,13 @@ pluginManagement {
     mavenCentral()
     maven { url("$rootDir/../node_modules/react-native/android") }
   }
+  resolutionStrategy {
+    eachPlugin {
+      if (requested.id.id == "com.facebook.react") {
+        useModule("com.facebook.react:react-native-gradle-plugin:0.81.0")
+      }
+    }
+  }
 }
 
 dependencyResolutionManagement {
@@ -17,8 +24,3 @@ dependencyResolutionManagement {
     maven { url("$rootDir/../node_modules/jsc-android/dist") }
   }
 }
-
-includeBuild("../node_modules/react-native-gradle-plugin")
-
-rootProject.name = 'MVP App'
-include ':app'
