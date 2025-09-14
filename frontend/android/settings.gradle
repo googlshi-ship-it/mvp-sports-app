@@ -24,6 +24,11 @@ pluginManagement {
   includeBuild(expoPluginsPath)
 }
 
+plugins {
+  id("com.facebook.react.settings")
+  id("expo-autolinking-settings")
+}
+
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
   repositories {
@@ -37,11 +42,6 @@ dependencyResolutionManagement {
     // (опционально) если есть локальные aar
     maven { url("$rootDir/../node_modules/jsc-android/dist") }
   }
-}
-
-plugins {
-  id("com.facebook.react.settings")
-  id("expo-autolinking-settings")
 }
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
