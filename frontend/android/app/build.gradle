@@ -190,3 +190,10 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+configurations.all {
+    resolutionStrategy {
+        force "com.facebook.react:react-android:0.81.0"
+        force "com.facebook.fbjni:fbjni:0.6.0"
+    }
+}
