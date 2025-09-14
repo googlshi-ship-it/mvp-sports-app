@@ -7,11 +7,11 @@
     "sdkVersion": "54.0.0",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#000000",
-    "runtimeVersion": "exposdk:54.0.0",
+    "runtimeVersion": "1",
     "updates": {
       "enabled": true,
-      "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/9913f18b-bb99-4928-9ea7-fff86bc2e7ac"
+      "url": "https://u.expo.dev/9913f18b-bb99-4928-9ea7-fff86bc2e7ac",
+      "runtimeVersion": "1"
     },
     "ios": {
       "bundleIdentifier": "com.mvpapp.mobile",
