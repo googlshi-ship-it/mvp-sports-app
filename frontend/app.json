@@ -7,7 +7,9 @@
     "sdkVersion": "54.0.0",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#000000",
-    "runtimeVersion": "exposdk:54.0.0",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
     "updates": {
       "enabled": true,
       "fallbackToCacheTimeout": 0,
@@ -23,7 +25,7 @@
     },
     "android": {
       "package": "com.mvpapp.mobile",
-      "jsEngine": "hermes",
+      "jsEngine": "jsc",
       "backgroundColor": "#000000"
     },
     "extra": {
@@ -32,8 +34,7 @@
       }
     },
     "plugins": [
-      "expo-router",
-      "expo-dev-client"
+      "expo-router"
     ]
   }
 }
