@@ -1,0 +1,20 @@
+Using EAS CLI without version control system is not recommended, use this mode only if you know what you are doing.
+The field "cli.appVersionSource" is not set, but it will be required in the future. Learn more: https://docs.expo.dev/build-reference/app-versions/
+Resolved "production" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "production" environment on EAS.
+Environment variables loaded from the "a55-apk" build profile "env" configuration: NODE_ENV.
+
+You set NODE_ENV=production in the build profile or environment variables. Remember that it will be available during the entire build process. In particular, it will make yarn/npm install only production packages.
+
+Specified value for "android.package" in app.json is ignored because an android directory was detected in the project.
+EAS Build will use the value found in the native code.
+The field "cli.appVersionSource" is not set, but it will be required in the future. Learn more: https://docs.expo.dev/build-reference/app-versions/
+✔ Using local Android credentials (credentials.json)
+
+Compressing project files and uploading to EAS Build. Learn more: https://expo.fyi/eas-build-archive
+- Uploading to EAS Build (0 / 1.5 MB)
+✔ Uploaded to EAS 
+- Computing project fingerprint
+✔ Computed project fingerprint
+This account has used its builds from the Free plan this month, which will reset in 16 days (on Wed Oct 01 2025). Upgrade your plan for more builds with shorter wait times and longer timeouts, and to run more builds concurrently with a subscription plan. https://expo.dev/accounts/mvpapp/settings/billing
+    Error: build command failed.
