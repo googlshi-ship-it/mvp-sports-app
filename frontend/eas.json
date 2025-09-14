@@ -2,11 +2,7 @@
   "cli": { "version": ">= 6.0.0" },
   "build": {
     "production-apk": {
-      "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease",
-        "extraGradleParams": "-PnewArchEnabled=false"
-      },
+      "android": { "buildType": "apk", "gradleCommand": ":app:assembleRelease" },
       "credentialsSource": "local",
       "distribution": "internal",
       "channel": "preview"
