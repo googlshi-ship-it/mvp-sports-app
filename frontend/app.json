@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "com.mvpapp.mobile",
-      "jsEngine": "hermes",
+      "jsEngine": "jsc",
       "backgroundColor": "#000000"
     },
     "extra": {
