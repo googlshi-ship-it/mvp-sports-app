@@ -1,11 +1,4 @@
 pluginManagement {
-  repositories {
-    gradlePluginPortal()
-    google()
-    mavenCentral()
-    maven { url("$rootDir/../node_modules/expo-modules-core/android/maven") }
-  }
-  
   def reactNativeGradlePlugin = new File(
     providers.exec {
       workingDir(rootDir)
@@ -27,21 +20,6 @@ pluginManagement {
 plugins {
   id("com.facebook.react.settings")
   id("expo-autolinking-settings")
-}
-
-dependencyResolutionManagement {
-  repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
-  repositories {
-    google()
-    mavenCentral()
-
-    // ВАЖНО: чтобы CMake видел цели ReactAndroid::*
-    maven { url("$rootDir/../node_modules/react-native/android") }
-    maven { url("$rootDir/../node_modules/react-native/android/maven") }
-
-    // (опционально) если есть локальные aar
-    maven { url("$rootDir/../node_modules/jsc-android/dist") }
-  }
 }
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
