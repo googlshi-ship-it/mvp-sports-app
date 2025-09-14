@@ -1,6 +1,9 @@
 {
-  "cli": { "version": ">= 6.0.0" },
+  "cli": { "version": ">= 13.3.0" },
   "build": {
+    "a55-apk": {
+      "android": { "buildType": "apk" }
+    },
     "production-apk": {
       "android": {
         "buildType": "apk",
