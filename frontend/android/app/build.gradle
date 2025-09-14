@@ -181,6 +181,8 @@ dependencies {
 
     // Multidex support
     implementation("androidx.multidex:multidex:2.0.1")
+    implementation("com.facebook.react:react-android:0.81.0")
+    implementation("com.facebook.fbjni:fbjni:0.6.0")
     
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
