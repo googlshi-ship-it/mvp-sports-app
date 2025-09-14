@@ -7,11 +7,6 @@ pluginManagement {
   }
 }
 
-plugins {
-  id("com.facebook.react.settings")
-  id("expo-autolinking-settings")
-}
-
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
   repositories {
@@ -22,6 +17,8 @@ dependencyResolutionManagement {
     maven { url("$rootDir/../node_modules/jsc-android/dist") }
   }
 }
+
+includeBuild("../node_modules/react-native-gradle-plugin")
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
   if (System.getenv('EXPO_USE_COMMUNITY_AUTOLINKING') == '1') {
