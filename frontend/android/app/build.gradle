@@ -2,9 +2,6 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
-
-// React config
-def enableHermes = true
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
 /**
@@ -83,6 +80,7 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  * this variant is about 6MiB larger per architecture than default.
  */
 
+
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -97,9 +95,7 @@ android {
         versionCode 1
         versionName "1.0.0"
 
-        
-        multiDexEnabled true
-buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+        buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
     signingConfigs {
         debug {
@@ -157,16 +153,10 @@ buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reac
 }
 
 dependencies {
-    // The version of react-native is set by the React Native Gradle Plugin
-    implementation("com.facebook.react:react-android")
-
-    def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
-    def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
-    def isWebpAnimatedEnabled = (findProperty('expo.webp.animated') ?: "") == "true";
-
-    if (isGifEnabled) {
-        // For animated gif support
-        implementation("com.facebook.fresco:animated-gif:${expoLibs.versions.fresco.get()}")
+  implementation("com.facebook.react:hermes-android")
+  implementation("androidx.multidex:multidex:2.0.1")
+}
+")
     }
 
     if (isWebpEnabled) {
@@ -178,6 +168,8 @@ dependencies {
         }
     }
 
-    if (hermesEnabled.toBoolean()) {
+
         implementation("com.facebook.react:hermes-android")
-}
+    } else {
+        implementation jscFlavor
+    }
