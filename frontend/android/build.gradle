@@ -22,3 +22,35 @@ allprojects {
 
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"
+
+
+// Patch: force disable Fabric/Turbo for Reanimated CMake (hard hook)
+subprojects { sp ->
+  if (sp.name == "react-native-reanimated") {
+    sp.afterEvaluate {
+      try {
+        // 1) Force disable New Architecture for CMake
+        sp.android.defaultConfig {
+          externalNativeBuild {
+            cmake {
+              arguments += ["-DIS_NEW_ARCHITECTURE_ENABLED=false"]
+            }
+          }
+        }
+      } catch (Throwable ignored) { }
+
+      try {
+        // 2) Fallback: append flag to configureCMake* tasks if already configured
+        sp.tasks.matching { it.name.startsWith("configureCMake") }.configureEach { t ->
+          if (t.hasProperty("arguments")) {
+            def args = t.property("arguments")
+            if (args instanceof List && !args.contains("-DIS_NEW_ARCHITECTURE_ENABLED=false")) {
+              args += "-DIS_NEW_ARCHITECTURE_ENABLED=false"
+              t.setProperty("arguments", args)
+            }
+          }
+        }
+      } catch (Throwable ignored) { }
+    }
+  }
+}
