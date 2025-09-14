@@ -1,35 +1,16 @@
 {
-  "cli": {
-    "version": ">= 6.0.0"
-  },
+  "cli": { "version": ">= 6.0.0" },
   "build": {
-    "preview-apk": {
-      "android": {
-        "buildType": "apk"
-      },
-      "developmentClient": false,
-      "distribution": "internal",
-      "channel": "preview"
-    },
-    "debug-apk": {
-      "developmentClient": true,
-      "android": {
-        "buildType": "apk"
-      },
-      "distribution": "internal",
-      "channel": "preview",
-      "credentialsSource": "local"
-    },
     "production-apk": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "extraGradleParams": "-PnewArchEnabled=false"
       },
-      "channel": "preview",
+      "credentialsSource": "local",
       "distribution": "internal",
-      "credentialsSource": "local"
+      "channel": "preview"
     }
   },
-  "submit": {
-    "android": {}
-  }
+  "submit": { "android": {} }
 }
