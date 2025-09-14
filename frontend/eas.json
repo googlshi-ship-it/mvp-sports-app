@@ -3,16 +3,6 @@
   "build": {
     "a55-apk": {
       "android": { "buildType": "apk" }
-    },
-    "production-apk": {
-      "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease -PnewArchEnabled=false"
-      },
-      "credentialsSource": "local",
-      "distribution": "internal",
-      "channel": "preview"
     }
-  },
-  "submit": { "android": {} }
+  }
 }
