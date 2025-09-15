@@ -25,7 +25,6 @@ jobs:
         working-directory: frontend
         shell: bash
         run: |
-          corepack enable || true
           if [ -f yarn.lock ]; then
             yarn install --check-files
           elif [ -f package-lock.json ]; then
