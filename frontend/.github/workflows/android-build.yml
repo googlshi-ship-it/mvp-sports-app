@@ -95,12 +95,12 @@ jobs:
       - name: Build RELEASE (signed)
         if: ${{ steps.detect.outputs.has_keystore == 'true' }}
         working-directory: frontend/android
-        run: ./gradlew --no-daemon assembleRelease
+        run: ./gradlew --no-daemon --stacktrace --info assembleRelease
 
       - name: Build DEBUG (fallback)
         if: ${{ steps.detect.outputs.has_keystore != 'true' }}
         working-directory: frontend/android
-        run: ./gradlew --no-daemon assembleDebug
+        run: ./gradlew --no-daemon --stacktrace --info assembleDebug
 
       - name: Upload RELEASE APK
         if: ${{ steps.detect.outputs.has_keystore == 'true' }}
