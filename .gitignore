@@ -98,3 +98,7 @@ android-sdk/ -e
 *.env
 *.env.*
 mvp-sports-app.tar.gz
+-e 
+# Environment files
+*.env
+*.env.*
