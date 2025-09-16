@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "MVP App",
+    "slug": "mvp-app",
+    "owner": "mvpapp",
+    "scheme": "mvpapp",
+    "sdkVersion": "54.0.0",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#000000",
+    "runtimeVersion": "1",
+    "updates": {
+      "enabled": true,
+      "url": "https://u.expo.dev/9913f18b-bb99-4928-9ea7-fff86bc2e7ac",
+      "runtimeVersion": "1"
+    },
+    "ios": {
+      "bundleIdentifier": "com.mvpapp.mobile",
+      "jsEngine": "jsc",
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIViewControllerBasedStatusBarAppearance": true
+      }
+    },
+    "android": {
+      "package": "com.mvpapp.mobile",
+      "jsEngine": "hermes",
+      "backgroundColor": "#000000"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9913f18b-bb99-4928-9ea7-fff86bc2e7ac"
+      }
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

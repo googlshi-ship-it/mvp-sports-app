@@ -1,0 +1,178 @@
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator, FlatList, Image, TouchableOpacity, RefreshControl, Platform, ToastAndroid, Alert } from "react-native";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { apiGet } from "../../src/api/client";
+
+function TypeBadge({ type }: { type?: string }) {
+  const label = (type || "").toUpperCase();
+  const bg = type === "league" ? "#1f2940" : "#3a1f2a";
+  const color = type === "league" ? "#7ea8ff" : "#ff9bb2";
+  return <View style={[styles.badge, { backgroundColor: bg }]}><Text style={[styles.badgeTxt, { color }]}>{label || "UNKNOWN"}</Text></View>;
+}
+
+function groupByDate(matches: any[]): { title: string; data: any[] }[] {
+  const out: { title: string; data: any[] }[] = [
+    { title: "Today", data: [] },
+    { title: "Tomorrow", data: [] },
+    { title: "This Week", data: [] },
+  ];
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const todayEnd = new Date(start.getTime() + 24 * 3600 * 1000);
+  const tomorrowEnd = new Date(start.getTime() + 48 * 3600 * 1000);
+  matches.forEach((m) => {
+    const raw = m?.startTime;
+    if (!raw) {
+      out[2].data.push(m);
+      return;
+    }
+    const st = new Date(raw);
+    if (isNaN(st.getTime())) {
+      out[2].data.push(m);
+      return;
+    }
+    if (st <= todayEnd) out[0].data.push(m);
+    else if (st <= tomorrowEnd) out[1].data.push(m);
+    else out[2].data.push(m);
+  });
+  return out.filter((g) => g.data.length > 0);
+}
+
+export default function CompetitionDetail() {
+  const { id } = useLocalSearchParams();
+  const [comp, setComp] = useState<any | null>(null);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const toast = (m: string) => {
+    if (Platform.OS === "android") ToastAndroid.show(m, ToastAndroid.SHORT);
+    else Alert.alert(m);
+  };
+
+  const load = async () => {
+    try {
+      setError(null);
+      const c = await apiGet(`/api/competitions/${id}`);
+      const ms = await apiGet(`/api/competitions/${id}/matches?tz=${encodeURIComponent(tz)}`);
+      setComp(c);
+      setMatches(Array.isArray(ms) ? ms : []);
+    } catch (e: any) {
+      console.warn(e);
+      setError("Failed to load competition");
+      toast("Failed to load competition");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, [id]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    load();
+  };
+
+  if (loading)
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color="#9b8cff" />
+      </View>
+    );
+  if (!comp)
+    return (
+      <View style={styles.center}>
+        <Text style={{ color: "#fff", marginBottom: 8 }}>Not found</Text>
+        <TouchableOpacity onPress={load} style={styles.retryBtn}>
+          <Text style={styles.retryTxt}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+
+  const sections = groupByDate(matches);
+
+  const Retry = () => (
+    <TouchableOpacity onPress={load} style={styles.retryBtn}>
+      <Text style={styles.retryTxt}>Retry</Text>
+    </TouchableOpacity>
+  );
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }} edges={["top","left","right","bottom"]}>
+      <Stack.Screen
+        options={{
+          title: `Competition ${id ?? ""}`,
+          headerBackTitle: "Back",
+          headerStyle: { backgroundColor: '#000' },
+          headerTintColor: '#fff',
+          headerTitleAlign: 'center',
+        }}
+      />
+      <FlatList
+        data={sections}
+        keyExtractor={(s) => s.title}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9b8cff" />}
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ flex: 1, backgroundColor: '#000' }}
+        renderItem={({ item: section }) => (
+          <View style={{ marginBottom: 18 }}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            {section.data.map((m) => (
+              <TouchableOpacity
+                key={m?._id || `${m?.homeTeam?.name}-${m?.awayTeam?.name}-${m?.startTime}`}
+                style={styles.row}
+                onPress={() => router.push(`/match/${m._id}`)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.time}>
+                    {m?.start_time_local
+                      ? new Date(m.start_time_local).toLocaleTimeString()
+                      : m?.startTime
+                      ? new Date(m.startTime).toLocaleTimeString()
+                      : "—"}
+                  </Text>
+                  <Text style={styles.matchLine}>
+                    {m?.homeTeam?.name || "—"} — {m?.awayTeam?.name || "—"}
+                  </Text>
+                  {m?.stadium || m?.venue ? <Text style={styles.meta}>{m.stadium || m.venue}</Text> : null}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        ListEmptyComponent={
+          <View>
+            <Text style={styles.empty}>No upcoming matches</Text>
+            <Retry />
+          </View>
+        }
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#000" },
+  center: { flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center" },
+  header: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16 },
+  logo: { width: 48, height: 48, borderRadius: 8, marginRight: 8 },
+  name: { color: "#fff", fontWeight: "800", fontSize: 18 },
+  meta: { color: "#9aa3b2", marginTop: 2 },
+  badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
+  badgeTxt: { fontWeight: "800", fontSize: 12 },
+  sectionTitle: { color: "#c7d1df", paddingHorizontal: 16, marginBottom: 8, fontWeight: "700" },
+  row: { padding: 12, backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", marginBottom: 10 },
+  time: { color: "#fff", fontWeight: "700" },
+  matchLine: { color: "#fff", marginTop: 4, fontSize: 16, fontWeight: "700" },
+  empty: { color: "#9aa3b2", textAlign: "center", padding: 16 },
+  retryBtn: { alignSelf: "center", marginTop: 8, backgroundColor: "#1f1b3a", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
+  retryTxt: { color: "#fff", fontWeight: "700" },
+});
