@@ -25,6 +25,10 @@ jobs:
         working-directory: frontend
         run: npm install
 
+      - name: Create keystore if needed
+        working-directory: frontend
+        run: eas credentials -p android --skip-keystore-validation || echo "Keystore already exists or error occurred"
+
       - name: Build Android APK with EAS
         working-directory: frontend
         run: eas build --platform android --profile preview --non-interactive --no-wait
