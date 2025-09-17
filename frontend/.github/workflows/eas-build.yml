@@ -1,0 +1,37 @@
+name: EAS Build Android APK
+on: 
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Android APK with EAS
+        working-directory: frontend
+        run: eas build --platform android --profile preview --non-interactive --no-wait
+
+      - name: Wait and download APK
+        working-directory: frontend
+        run: |
+          echo "Build started! Check EAS dashboard for progress:"
+          echo "https://expo.dev/accounts/mvpapp/projects/mvp-sports-app/builds"
+          echo "APK will be available for download once build completes."
