@@ -1,34 +1,37 @@
 {
   "expo": {
-    "name": "MVP App",
-    "slug": "mvp-app",
-    "owner": "mvpapp",
-    "scheme": "mvpapp",
-    "sdkVersion": "54.0.0",
+    "name": "MVP Sports App",
+    "slug": "mvp-sports-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#000000",
-    "runtimeVersion": "1",
-    "updates": {
-      "enabled": true,
-      "url": "https://u.expo.dev/9913f18b-bb99-4928-9ea7-fff86bc2e7ac",
-      "runtimeVersion": "1"
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "bundleIdentifier": "com.mvpapp.mobile",
-      "jsEngine": "jsc",
-      "supportsTablet": true,
-      "infoPlist": {
-        "UIViewControllerBasedStatusBarAppearance": true
-      }
+      "supportsTablet": true
     },
     "android": {
-      "package": "com.mvpapp.mobile",
-      "jsEngine": "hermes",
-      "backgroundColor": "#000000"
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "package": "com.mvpapp.mobile"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "9913f18b-bb99-4928-9ea7-fff86bc2e7ac"
+        "projectId": "8db52656-3f88-4984-90a6-16f2215f4534"
       }
     },
     "plugins": [
