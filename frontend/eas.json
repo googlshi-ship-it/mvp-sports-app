@@ -1,13 +1,16 @@
 {
   "cli": { "version": ">= 13.3.0" },
   "build": {
-    "a55-apk": {
+    "preview": {
       "android": { 
         "buildType": "apk",
         "credentialsSource": "local"
-      },
-      "channel": "production",
-      "env": { "NODE_ENV": "production" }
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "aab"
+      }
     }
   }
 }
