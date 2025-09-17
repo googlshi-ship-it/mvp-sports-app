@@ -1,41 +1,122 @@
-name: EAS Build Android APK
-on: 
-  workflow_dispatch: {}
+name: Android APK (Manual)
+
+on:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      ANDROID_SDK_ROOT: $HOME/android-sdk
+      ANDROID_HOME: $HOME/android-sdk
+      GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js (no cache)
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Setup Expo and EAS
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install dependencies
+      - name: Install JS deps (frontend)
         working-directory: frontend
-        run: npm install
-
-      - name: Create keystore if needed
-        working-directory: frontend
-        run: eas credentials -p android --skip-keystore-validation || echo "Keystore already exists or error occurred"
-
-      - name: Build Android APK with EAS
-        working-directory: frontend
-        run: eas build --platform android --profile preview --non-interactive --no-wait
-
-      - name: Wait and download APK
-        working-directory: frontend
+        shell: bash
         run: |
-          echo "Build started! Check EAS dashboard for progress:"
-          echo "https://expo.dev/accounts/mvpapp/projects/mvp-sports-app/builds"
-          echo "APK will be available for download once build completes."
+          if [ -f yarn.lock ]; then
+            npm i -g yarn@1.22.22
+            yarn install --check-files
+          elif [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Setup Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 11
+          cache: gradle
+
+      - name: Setup Android SDK (manual, stable)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O /tmp/cmdtools.zip
+          unzip -q /tmp/cmdtools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+          mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --version
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-35" "build-tools;35.0.0" \
+            "platforms;android-36" "build-tools;36.0.0" || true
+
+      - name: Write local.properties
+        working-directory: frontend/android
+        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
+      - name: Force Gradle 8.7 wrapper
+        working-directory: frontend/android
+        shell: bash
+        run: |
+          f=gradle/wrapper/gradle-wrapper.properties
+          [ -f "$f" ] && sed -i 's#^distributionUrl=.*#distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip#' "$f" || true
+
+      - name: Make gradlew executable
+        run: chmod +x frontend/android/gradlew
+
+      - name: Print tool versions
+        working-directory: frontend/android
+        run: |
+          java -version || true
+          node -v || true
+          yarn -v || true
+          ./gradlew -v || true
+
+      - name: Build APK (capture full log)
+        working-directory: frontend/android
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          LOG="$GITHUB_WORKSPACE/gradle-build.log"
+          if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] && [ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ] && [ -n "${ANDROID_KEY_ALIAS:-}" ] && [ -n "${ANDROID_KEY_PASSWORD:-}" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > app/release.keystore
+            mkdir -p "$HOME/.gradle"
+            {
+              echo "MYAPP_UPLOAD_STORE_FILE=app/release.keystore"
+              echo "MYAPP_UPLOAD_STORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD"
+              echo "MYAPP_UPLOAD_KEY_ALIAS=$ANDROID_KEY_ALIAS"
+              echo "MYAPP_UPLOAD_KEY_PASSWORD=$ANDROID_KEY_PASSWORD"
+              echo "org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8"
+              echo "android.useAndroidX=true"
+              echo "android.enableJetifier=true"
+            } > "$HOME/.gradle/gradle.properties"
+            ./gradlew --no-daemon --stacktrace --info assembleRelease 2>&1 | tee "$LOG"
+          else
+            ./gradlew --no-daemon --stacktrace --info assembleDebug 2>&1 | tee "$LOG"
+          fi
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: gradle-build.log
+          if-no-files-found: error
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-apk
+          path: |
+            frontend/android/app/build/outputs/apk/release/*.apk
+            frontend/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
